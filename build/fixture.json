@@ -1,0 +1,149 @@
+{
+    "topics": [
+        {
+            "name": "payments",
+            "retry_config": {
+                "max_retries": 5,
+                "base_interval_seconds": 10,
+                "max_interval_seconds": 3600
+            },
+            "subscriber": "system.us-east.1",
+            "operations": [
+                {
+                    "name": "payment.success",
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "customer_id",
+                            "amount",
+                            "currency",
+                            "timestamp"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "customer_id": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "integer"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "timestamp": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "payment.fail",
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "customer_id",
+                            "amount",
+                            "currency",
+                            "failure_reason",
+                            "timestamp"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "customer_id": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "integer"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "failure_reason": {
+                                "type": "string"
+                            },
+                            "timestamp": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "invoices",
+            "retry_config": {
+                "max_retries": 3,
+                "base_interval_seconds": 15,
+                "max_interval_seconds": 1800
+            },
+            "operations": [
+                {
+                    "name": "invoice.created",
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "customer_id",
+                            "amount",
+                            "status",
+                            "due_date",
+                            "timestamp"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "customer_id": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "due_date": {
+                                "type": "integer"
+                            },
+                            "timestamp": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "invoice.paid",
+                    "schema": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "customer_id",
+                            "amount",
+                            "timestamp"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "customer_id": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "integer"
+                            },
+                            "timestamp": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
