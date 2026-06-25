@@ -7,7 +7,6 @@
                 "base_interval_seconds": 10,
                 "max_interval_seconds": 3600
             },
-            "subscriber": "system.us-east.1",
             "operations": [
                 {
                     "name": "payment.success",
@@ -84,7 +83,7 @@
             },
             "operations": [
                 {
-                    "name": "invoice.created",
+                    "name": "invoice.generated",
                     "schema": {
                         "type": "object",
                         "required": [
@@ -109,33 +108,7 @@
                                 "type": "string"
                             },
                             "due_date": {
-                                "type": "integer"
-                            },
-                            "timestamp": {
-                                "type": "integer"
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "invoice.paid",
-                    "schema": {
-                        "type": "object",
-                        "required": [
-                            "id",
-                            "customer_id",
-                            "amount",
-                            "timestamp"
-                        ],
-                        "properties": {
-                            "id": {
                                 "type": "string"
-                            },
-                            "customer_id": {
-                                "type": "string"
-                            },
-                            "amount": {
-                                "type": "integer"
                             },
                             "timestamp": {
                                 "type": "integer"
@@ -144,6 +117,18 @@
                     }
                 }
             ]
+        }
+    ],
+    "subscriptions": [
+        {
+            "topic": "payments",
+            "consumer_url": "http://localhost:8081/webhooks/payments",
+            "secret_key": "payments-dummy-signing-secret"
+        },
+        {
+            "topic": "invoices",
+            "consumer_url": "http://localhost:8081/webhooks/invoices",
+            "secret_key": "invoices-dummy-signing-secret"
         }
     ]
 }
