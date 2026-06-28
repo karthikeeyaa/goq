@@ -1,8 +1,8 @@
 -- name: CreateMessage :one
 INSERT INTO messages (
     id,
-    topic_name,
-    operation_name,
+    topic_id,
+    operation_id,
     payload,
     status
 ) VALUES (?, ?, ?, ?, ?)

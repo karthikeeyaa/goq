@@ -7,40 +7,42 @@ package generated
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
     id,
-    topic_name,
-    operation_name,
+    topic_id,
+    operation_id,
     payload,
     status
 ) VALUES (?, ?, ?, ?, ?)
-RETURNING id, topic_name, operation_name, payload, status, created_at
+RETURNING id, topic_id, operation_id, payload, status, created_at
 `
 
 type CreateMessageParams struct {
-	ID            string `json:"id"`
-	TopicName     string `json:"topic_name"`
-	OperationName string `json:"operation_name"`
-	Payload       string `json:"payload"`
-	Status        string `json:"status"`
+	ID          uuid.UUID `json:"id"`
+	TopicID     uuid.UUID `json:"topic_id"`
+	OperationID uuid.UUID `json:"operation_id"`
+	Payload     string    `json:"payload"`
+	Status      string    `json:"status"`
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
 	row := q.db.QueryRowContext(ctx, createMessage,
 		arg.ID,
-		arg.TopicName,
-		arg.OperationName,
+		arg.TopicID,
+		arg.OperationID,
 		arg.Payload,
 		arg.Status,
 	)
 	var i Message
 	err := row.Scan(
 		&i.ID,
-		&i.TopicName,
-		&i.OperationName,
+		&i.TopicID,
+		&i.OperationID,
 		&i.Payload,
 		&i.Status,
 		&i.CreatedAt,
@@ -53,23 +55,23 @@ DELETE FROM messages
 WHERE id = ?
 `
 
-func (q *Queries) DeleteMessage(ctx context.Context, id string) error {
+func (q *Queries) DeleteMessage(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteMessage, id)
 	return err
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT id, topic_name, operation_name, payload, status, created_at FROM messages
+SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
 WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetMessage(ctx context.Context, id string) (Message, error) {
+func (q *Queries) GetMessage(ctx context.Context, id uuid.UUID) (Message, error) {
 	row := q.db.QueryRowContext(ctx, getMessage, id)
 	var i Message
 	err := row.Scan(
 		&i.ID,
-		&i.TopicName,
-		&i.OperationName,
+		&i.TopicID,
+		&i.OperationID,
 		&i.Payload,
 		&i.Status,
 		&i.CreatedAt,
@@ -78,7 +80,7 @@ func (q *Queries) GetMessage(ctx context.Context, id string) (Message, error) {
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, topic_name, operation_name, payload, status, created_at FROM messages
+SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
 ORDER BY created_at DESC
 `
 
@@ -93,8 +95,8 @@ func (q *Queries) ListMessages(ctx context.Context) ([]Message, error) {
 		var i Message
 		if err := rows.Scan(
 			&i.ID,
-			&i.TopicName,
-			&i.OperationName,
+			&i.TopicID,
+			&i.OperationID,
 			&i.Payload,
 			&i.Status,
 			&i.CreatedAt,
@@ -113,7 +115,7 @@ func (q *Queries) ListMessages(ctx context.Context) ([]Message, error) {
 }
 
 const listMessagesByStatus = `-- name: ListMessagesByStatus :many
-SELECT id, topic_name, operation_name, payload, status, created_at FROM messages
+SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
 WHERE status = ?
 ORDER BY created_at DESC
 `
@@ -129,8 +131,8 @@ func (q *Queries) ListMessagesByStatus(ctx context.Context, status string) ([]Me
 		var i Message
 		if err := rows.Scan(
 			&i.ID,
-			&i.TopicName,
-			&i.OperationName,
+			&i.TopicID,
+			&i.OperationID,
 			&i.Payload,
 			&i.Status,
 			&i.CreatedAt,
@@ -152,12 +154,12 @@ const updateMessageStatus = `-- name: UpdateMessageStatus :one
 UPDATE messages
 SET status = ?
 WHERE id = ?
-RETURNING id, topic_name, operation_name, payload, status, created_at
+RETURNING id, topic_id, operation_id, payload, status, created_at
 `
 
 type UpdateMessageStatusParams struct {
-	Status string `json:"status"`
-	ID     string `json:"id"`
+	Status string    `json:"status"`
+	ID     uuid.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateMessageStatus(ctx context.Context, arg UpdateMessageStatusParams) (Message, error) {
@@ -165,8 +167,8 @@ func (q *Queries) UpdateMessageStatus(ctx context.Context, arg UpdateMessageStat
 	var i Message
 	err := row.Scan(
 		&i.ID,
-		&i.TopicName,
-		&i.OperationName,
+		&i.TopicID,
+		&i.OperationID,
 		&i.Payload,
 		&i.Status,
 		&i.CreatedAt,

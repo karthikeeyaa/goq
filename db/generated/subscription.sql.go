@@ -7,68 +7,30 @@ package generated
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
-const createSubscription = `-- name: CreateSubscription :one
-INSERT INTO subscriptions (
-    id,
-    operation_name,
-    consumer_url,
-    secret_key,
-    is_active
-) VALUES (?, ?, ?, ?, ?)
-RETURNING id, operation_name, consumer_url, secret_key, is_active, created_at
-`
-
-type CreateSubscriptionParams struct {
-	ID            string `json:"id"`
-	OperationName string `json:"operation_name"`
-	ConsumerUrl   string `json:"consumer_url"`
-	SecretKey     string `json:"secret_key"`
-	IsActive      int64  `json:"is_active"`
-}
-
-func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error) {
-	row := q.db.QueryRowContext(ctx, createSubscription,
-		arg.ID,
-		arg.OperationName,
-		arg.ConsumerUrl,
-		arg.SecretKey,
-		arg.IsActive,
-	)
-	var i Subscription
-	err := row.Scan(
-		&i.ID,
-		&i.OperationName,
-		&i.ConsumerUrl,
-		&i.SecretKey,
-		&i.IsActive,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const deleteSubscription = `-- name: DeleteSubscription :exec
+const deleteAllSubscriptions = `-- name: DeleteAllSubscriptions :exec
 DELETE FROM subscriptions
-WHERE id = ?
 `
 
-func (q *Queries) DeleteSubscription(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteSubscription, id)
+func (q *Queries) DeleteAllSubscriptions(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAllSubscriptions)
 	return err
 }
 
 const getSubscription = `-- name: GetSubscription :one
-SELECT id, operation_name, consumer_url, secret_key, is_active, created_at FROM subscriptions
+SELECT id, topic_id, consumer_url, secret_key, is_active, created_at FROM subscriptions
 WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetSubscription(ctx context.Context, id string) (Subscription, error) {
+func (q *Queries) GetSubscription(ctx context.Context, id uuid.UUID) (Subscription, error) {
 	row := q.db.QueryRowContext(ctx, getSubscription, id)
 	var i Subscription
 	err := row.Scan(
 		&i.ID,
-		&i.OperationName,
+		&i.TopicID,
 		&i.ConsumerUrl,
 		&i.SecretKey,
 		&i.IsActive,
@@ -78,21 +40,21 @@ func (q *Queries) GetSubscription(ctx context.Context, id string) (Subscription,
 }
 
 const getSubscriptionByUniqueKey = `-- name: GetSubscriptionByUniqueKey :one
-SELECT id, operation_name, consumer_url, secret_key, is_active, created_at FROM subscriptions
-WHERE operation_name = ? AND consumer_url = ? LIMIT 1
+SELECT id, topic_id, consumer_url, secret_key, is_active, created_at FROM subscriptions
+WHERE topic_id = ? AND consumer_url = ? LIMIT 1
 `
 
 type GetSubscriptionByUniqueKeyParams struct {
-	OperationName string `json:"operation_name"`
-	ConsumerUrl   string `json:"consumer_url"`
+	TopicID     uuid.UUID `json:"topic_id"`
+	ConsumerUrl string    `json:"consumer_url"`
 }
 
 func (q *Queries) GetSubscriptionByUniqueKey(ctx context.Context, arg GetSubscriptionByUniqueKeyParams) (Subscription, error) {
-	row := q.db.QueryRowContext(ctx, getSubscriptionByUniqueKey, arg.OperationName, arg.ConsumerUrl)
+	row := q.db.QueryRowContext(ctx, getSubscriptionByUniqueKey, arg.TopicID, arg.ConsumerUrl)
 	var i Subscription
 	err := row.Scan(
 		&i.ID,
-		&i.OperationName,
+		&i.TopicID,
 		&i.ConsumerUrl,
 		&i.SecretKey,
 		&i.IsActive,
@@ -101,14 +63,53 @@ func (q *Queries) GetSubscriptionByUniqueKey(ctx context.Context, arg GetSubscri
 	return i, err
 }
 
-const listActiveSubscriptionsForOperation = `-- name: ListActiveSubscriptionsForOperation :many
-SELECT id, operation_name, consumer_url, secret_key, is_active, created_at FROM subscriptions
-WHERE operation_name = ? AND is_active = 1
+const insertSubscription = `-- name: InsertSubscription :one
+INSERT INTO subscriptions (
+    id,
+    topic_id,
+    consumer_url,
+    secret_key,
+    is_active
+) VALUES (?, ?, ?, ?, ?)
+RETURNING id, topic_id, consumer_url, secret_key, is_active, created_at
+`
+
+type InsertSubscriptionParams struct {
+	ID          uuid.UUID `json:"id"`
+	TopicID     uuid.UUID `json:"topic_id"`
+	ConsumerUrl string    `json:"consumer_url"`
+	SecretKey   string    `json:"secret_key"`
+	IsActive    bool      `json:"is_active"`
+}
+
+func (q *Queries) InsertSubscription(ctx context.Context, arg InsertSubscriptionParams) (Subscription, error) {
+	row := q.db.QueryRowContext(ctx, insertSubscription,
+		arg.ID,
+		arg.TopicID,
+		arg.ConsumerUrl,
+		arg.SecretKey,
+		arg.IsActive,
+	)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.TopicID,
+		&i.ConsumerUrl,
+		&i.SecretKey,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listActiveSubscriptionsForTopic = `-- name: ListActiveSubscriptionsForTopic :many
+SELECT id, topic_id, consumer_url, secret_key, is_active, created_at FROM subscriptions
+WHERE topic_id = ? AND is_active = 1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListActiveSubscriptionsForOperation(ctx context.Context, operationName string) ([]Subscription, error) {
-	rows, err := q.db.QueryContext(ctx, listActiveSubscriptionsForOperation, operationName)
+func (q *Queries) ListActiveSubscriptionsForTopic(ctx context.Context, topicID uuid.UUID) ([]Subscription, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveSubscriptionsForTopic, topicID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +119,7 @@ func (q *Queries) ListActiveSubscriptionsForOperation(ctx context.Context, opera
 		var i Subscription
 		if err := rows.Scan(
 			&i.ID,
-			&i.OperationName,
+			&i.TopicID,
 			&i.ConsumerUrl,
 			&i.SecretKey,
 			&i.IsActive,
@@ -138,7 +139,7 @@ func (q *Queries) ListActiveSubscriptionsForOperation(ctx context.Context, opera
 }
 
 const listSubscriptions = `-- name: ListSubscriptions :many
-SELECT id, operation_name, consumer_url, secret_key, is_active, created_at FROM subscriptions
+SELECT id, topic_id, consumer_url, secret_key, is_active, created_at FROM subscriptions
 ORDER BY created_at DESC
 `
 
@@ -153,7 +154,7 @@ func (q *Queries) ListSubscriptions(ctx context.Context) ([]Subscription, error)
 		var i Subscription
 		if err := rows.Scan(
 			&i.ID,
-			&i.OperationName,
+			&i.TopicID,
 			&i.ConsumerUrl,
 			&i.SecretKey,
 			&i.IsActive,
@@ -170,39 +171,4 @@ func (q *Queries) ListSubscriptions(ctx context.Context) ([]Subscription, error)
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateSubscription = `-- name: UpdateSubscription :one
-UPDATE subscriptions
-SET consumer_url = ?,
-    secret_key = ?,
-    is_active = ?
-WHERE id = ?
-RETURNING id, operation_name, consumer_url, secret_key, is_active, created_at
-`
-
-type UpdateSubscriptionParams struct {
-	ConsumerUrl string `json:"consumer_url"`
-	SecretKey   string `json:"secret_key"`
-	IsActive    int64  `json:"is_active"`
-	ID          string `json:"id"`
-}
-
-func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error) {
-	row := q.db.QueryRowContext(ctx, updateSubscription,
-		arg.ConsumerUrl,
-		arg.SecretKey,
-		arg.IsActive,
-		arg.ID,
-	)
-	var i Subscription
-	err := row.Scan(
-		&i.ID,
-		&i.OperationName,
-		&i.ConsumerUrl,
-		&i.SecretKey,
-		&i.IsActive,
-		&i.CreatedAt,
-	)
-	return i, err
 }

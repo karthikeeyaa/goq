@@ -1,4 +1,4 @@
-module queuego
+module goq
 
 go 1.26.4
 

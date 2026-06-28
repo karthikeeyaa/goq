@@ -2,7 +2,8 @@
 -- Database schema for gosub
 
 CREATE TABLE topics (
-    name                 TEXT    PRIMARY KEY,
+    id                   UUID    PRIMARY KEY,
+    name                 TEXT    NOT NULL UNIQUE,
     max_retries          INTEGER NOT NULL DEFAULT 5,
     base_interval_secs   INTEGER NOT NULL DEFAULT 10,
     max_interval_secs    INTEGER NOT NULL DEFAULT 3600,
@@ -10,15 +11,16 @@ CREATE TABLE topics (
 );
 
 CREATE TABLE operations (
-    name        TEXT PRIMARY KEY,
-    topic_name  TEXT NOT NULL REFERENCES topics(name) ON DELETE CASCADE,
+    id          UUID PRIMARY KEY,
+    topic_id    UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL UNIQUE,
     schema_json TEXT NOT NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE subscriptions (
-    id              TEXT    PRIMARY KEY,
-    operation_name  TEXT    NOT NULL REFERENCES operations(name) ON DELETE CASCADE,
+    id              UUID    PRIMARY KEY,
+    topic_id        UUID    NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     consumer_url    TEXT    NOT NULL,
     secret_key      TEXT    NOT NULL,
     is_active       INTEGER NOT NULL DEFAULT 1,
@@ -26,41 +28,16 @@ CREATE TABLE subscriptions (
 );
 
 CREATE UNIQUE INDEX idx_subscriptions_unique
-    ON subscriptions(operation_name, consumer_url);
+    ON subscriptions(topic_id, consumer_url);
 
 CREATE TABLE messages (
-    id              TEXT PRIMARY KEY,
-    topic_name      TEXT NOT NULL REFERENCES topics(name) ON DELETE CASCADE,
-    operation_name  TEXT NOT NULL REFERENCES operations(name) ON DELETE CASCADE,
+    id              UUID PRIMARY KEY,
+    topic_id        UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    operation_id    UUID NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
     payload         TEXT NOT NULL,
     status          TEXT NOT NULL DEFAULT 'pending',
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_messages_polling
-    ON messages(topic_name, status, created_at);
-
-CREATE TABLE delivery_attempts (
-    id               TEXT PRIMARY KEY,
-    message_id       TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    subscription_id  TEXT NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-    attempt_number   INTEGER NOT NULL DEFAULT 1,
-    status_code      INTEGER,
-    error_message    TEXT,
-    next_retry_at    DATETIME,
-    status           TEXT NOT NULL,
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_attempts_polling
-    ON delivery_attempts(status, next_retry_at);
-
-CREATE TABLE dlq (
-    id               TEXT PRIMARY KEY,
-    message_id       TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    subscription_id  TEXT NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
-    last_attempt_id  TEXT NOT NULL REFERENCES delivery_attempts(id) ON DELETE CASCADE,
-    reason           TEXT NOT NULL,
-    replayed_at      DATETIME,
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+    ON messages(topic_id, status, created_at);

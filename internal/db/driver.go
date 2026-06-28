@@ -3,13 +3,14 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
 
-func Connect(dsn string) (*sql.DB, error) {
+func Connect(dsn string, logger *log.Logger) (*sql.DB, error) {
 	dir := filepath.Dir(dsn)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {

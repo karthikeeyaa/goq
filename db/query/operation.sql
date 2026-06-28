@@ -1,5 +1,9 @@
 -- name: GetOperation :one
 SELECT * FROM operations
+WHERE id = ? LIMIT 1;
+
+-- name: GetOperationByName :one
+SELECT * FROM operations
 WHERE name = ? LIMIT 1;
 
 -- name: ListOperations :many
@@ -8,20 +12,17 @@ ORDER BY name ASC;
 
 -- name: ListOperationsByTopic :many
 SELECT * FROM operations
-WHERE topic_name = ?
+WHERE topic_id = ?
 ORDER BY name ASC;
 
--- name: UpsertOperation :one
+-- name: InsertOperation :one
 INSERT INTO operations (
+    id,
+    topic_id,
     name,
-    topic_name,
     schema_json
-) VALUES (?, ?, ?)
-ON CONFLICT(name) DO UPDATE SET
-    topic_name = excluded.topic_name,
-    schema_json = excluded.schema_json
+) VALUES (?, ?, ?, ?)
 RETURNING *;
 
--- name: DeleteOperation :exec
-DELETE FROM operations
-WHERE name = ?;
+-- name: DeleteAllOperations :exec
+DELETE FROM operations;

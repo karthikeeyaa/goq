@@ -7,27 +7,87 @@ package generated
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
-const deleteTopic = `-- name: DeleteTopic :exec
+const deleteAllTopics = `-- name: DeleteAllTopics :exec
 DELETE FROM topics
-WHERE name = ?
 `
 
-func (q *Queries) DeleteTopic(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, deleteTopic, name)
+func (q *Queries) DeleteAllTopics(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAllTopics)
 	return err
 }
 
 const getTopic = `-- name: GetTopic :one
-SELECT name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
+SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
+WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetTopic(ctx context.Context, id uuid.UUID) (Topic, error) {
+	row := q.db.QueryRowContext(ctx, getTopic, id)
+	var i Topic
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.MaxRetries,
+		&i.BaseIntervalSecs,
+		&i.MaxIntervalSecs,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getTopicByName = `-- name: GetTopicByName :one
+SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
 WHERE name = ? LIMIT 1
 `
 
-func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, getTopic, name)
+func (q *Queries) GetTopicByName(ctx context.Context, name string) (Topic, error) {
+	row := q.db.QueryRowContext(ctx, getTopicByName, name)
 	var i Topic
 	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.MaxRetries,
+		&i.BaseIntervalSecs,
+		&i.MaxIntervalSecs,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertTopic = `-- name: InsertTopic :one
+INSERT INTO topics (
+    id,
+    name,
+    max_retries,
+    base_interval_secs,
+    max_interval_secs
+) VALUES (?, ?, ?, ?, ?)
+RETURNING id, name, max_retries, base_interval_secs, max_interval_secs, created_at
+`
+
+type InsertTopicParams struct {
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	MaxRetries       int       `json:"max_retries"`
+	BaseIntervalSecs int       `json:"base_interval_secs"`
+	MaxIntervalSecs  int       `json:"max_interval_secs"`
+}
+
+func (q *Queries) InsertTopic(ctx context.Context, arg InsertTopicParams) (Topic, error) {
+	row := q.db.QueryRowContext(ctx, insertTopic,
+		arg.ID,
+		arg.Name,
+		arg.MaxRetries,
+		arg.BaseIntervalSecs,
+		arg.MaxIntervalSecs,
+	)
+	var i Topic
+	err := row.Scan(
+		&i.ID,
 		&i.Name,
 		&i.MaxRetries,
 		&i.BaseIntervalSecs,
@@ -38,7 +98,7 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 }
 
 const listTopics = `-- name: ListTopics :many
-SELECT name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
+SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
 ORDER BY name ASC
 `
 
@@ -52,6 +112,7 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 	for rows.Next() {
 		var i Topic
 		if err := rows.Scan(
+			&i.ID,
 			&i.Name,
 			&i.MaxRetries,
 			&i.BaseIntervalSecs,
@@ -69,43 +130,4 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 		return nil, err
 	}
 	return items, nil
-}
-
-const upsertTopic = `-- name: UpsertTopic :one
-INSERT INTO topics (
-    name,
-    max_retries,
-    base_interval_secs,
-    max_interval_secs
-) VALUES (?, ?, ?, ?)
-ON CONFLICT(name) DO UPDATE SET
-    max_retries = excluded.max_retries,
-    base_interval_secs = excluded.base_interval_secs,
-    max_interval_secs = excluded.max_interval_secs
-RETURNING name, max_retries, base_interval_secs, max_interval_secs, created_at
-`
-
-type UpsertTopicParams struct {
-	Name             string `json:"name"`
-	MaxRetries       int64  `json:"max_retries"`
-	BaseIntervalSecs int64  `json:"base_interval_secs"`
-	MaxIntervalSecs  int64  `json:"max_interval_secs"`
-}
-
-func (q *Queries) UpsertTopic(ctx context.Context, arg UpsertTopicParams) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, upsertTopic,
-		arg.Name,
-		arg.MaxRetries,
-		arg.BaseIntervalSecs,
-		arg.MaxIntervalSecs,
-	)
-	var i Topic
-	err := row.Scan(
-		&i.Name,
-		&i.MaxRetries,
-		&i.BaseIntervalSecs,
-		&i.MaxIntervalSecs,
-		&i.CreatedAt,
-	)
-	return i, err
 }

@@ -7,29 +7,84 @@ package generated
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
-const deleteOperation = `-- name: DeleteOperation :exec
+const deleteAllOperations = `-- name: DeleteAllOperations :exec
 DELETE FROM operations
-WHERE name = ?
 `
 
-func (q *Queries) DeleteOperation(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, deleteOperation, name)
+func (q *Queries) DeleteAllOperations(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAllOperations)
 	return err
 }
 
 const getOperation = `-- name: GetOperation :one
-SELECT name, topic_name, schema_json, created_at FROM operations
+SELECT id, topic_id, name, schema_json, created_at FROM operations
+WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetOperation(ctx context.Context, id uuid.UUID) (Operation, error) {
+	row := q.db.QueryRowContext(ctx, getOperation, id)
+	var i Operation
+	err := row.Scan(
+		&i.ID,
+		&i.TopicID,
+		&i.Name,
+		&i.SchemaJson,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getOperationByName = `-- name: GetOperationByName :one
+SELECT id, topic_id, name, schema_json, created_at FROM operations
 WHERE name = ? LIMIT 1
 `
 
-func (q *Queries) GetOperation(ctx context.Context, name string) (Operation, error) {
-	row := q.db.QueryRowContext(ctx, getOperation, name)
+func (q *Queries) GetOperationByName(ctx context.Context, name string) (Operation, error) {
+	row := q.db.QueryRowContext(ctx, getOperationByName, name)
 	var i Operation
 	err := row.Scan(
+		&i.ID,
+		&i.TopicID,
 		&i.Name,
-		&i.TopicName,
+		&i.SchemaJson,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertOperation = `-- name: InsertOperation :one
+INSERT INTO operations (
+    id,
+    topic_id,
+    name,
+    schema_json
+) VALUES (?, ?, ?, ?)
+RETURNING id, topic_id, name, schema_json, created_at
+`
+
+type InsertOperationParams struct {
+	ID         uuid.UUID `json:"id"`
+	TopicID    uuid.UUID `json:"topic_id"`
+	Name       string    `json:"name"`
+	SchemaJson string    `json:"schema_json"`
+}
+
+func (q *Queries) InsertOperation(ctx context.Context, arg InsertOperationParams) (Operation, error) {
+	row := q.db.QueryRowContext(ctx, insertOperation,
+		arg.ID,
+		arg.TopicID,
+		arg.Name,
+		arg.SchemaJson,
+	)
+	var i Operation
+	err := row.Scan(
+		&i.ID,
+		&i.TopicID,
+		&i.Name,
 		&i.SchemaJson,
 		&i.CreatedAt,
 	)
@@ -37,7 +92,7 @@ func (q *Queries) GetOperation(ctx context.Context, name string) (Operation, err
 }
 
 const listOperations = `-- name: ListOperations :many
-SELECT name, topic_name, schema_json, created_at FROM operations
+SELECT id, topic_id, name, schema_json, created_at FROM operations
 ORDER BY name ASC
 `
 
@@ -51,8 +106,9 @@ func (q *Queries) ListOperations(ctx context.Context) ([]Operation, error) {
 	for rows.Next() {
 		var i Operation
 		if err := rows.Scan(
+			&i.ID,
+			&i.TopicID,
 			&i.Name,
-			&i.TopicName,
 			&i.SchemaJson,
 			&i.CreatedAt,
 		); err != nil {
@@ -70,13 +126,13 @@ func (q *Queries) ListOperations(ctx context.Context) ([]Operation, error) {
 }
 
 const listOperationsByTopic = `-- name: ListOperationsByTopic :many
-SELECT name, topic_name, schema_json, created_at FROM operations
-WHERE topic_name = ?
+SELECT id, topic_id, name, schema_json, created_at FROM operations
+WHERE topic_id = ?
 ORDER BY name ASC
 `
 
-func (q *Queries) ListOperationsByTopic(ctx context.Context, topicName string) ([]Operation, error) {
-	rows, err := q.db.QueryContext(ctx, listOperationsByTopic, topicName)
+func (q *Queries) ListOperationsByTopic(ctx context.Context, topicID uuid.UUID) ([]Operation, error) {
+	rows, err := q.db.QueryContext(ctx, listOperationsByTopic, topicID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +141,9 @@ func (q *Queries) ListOperationsByTopic(ctx context.Context, topicName string) (
 	for rows.Next() {
 		var i Operation
 		if err := rows.Scan(
+			&i.ID,
+			&i.TopicID,
 			&i.Name,
-			&i.TopicName,
 			&i.SchemaJson,
 			&i.CreatedAt,
 		); err != nil {
@@ -101,34 +158,4 @@ func (q *Queries) ListOperationsByTopic(ctx context.Context, topicName string) (
 		return nil, err
 	}
 	return items, nil
-}
-
-const upsertOperation = `-- name: UpsertOperation :one
-INSERT INTO operations (
-    name,
-    topic_name,
-    schema_json
-) VALUES (?, ?, ?)
-ON CONFLICT(name) DO UPDATE SET
-    topic_name = excluded.topic_name,
-    schema_json = excluded.schema_json
-RETURNING name, topic_name, schema_json, created_at
-`
-
-type UpsertOperationParams struct {
-	Name       string `json:"name"`
-	TopicName  string `json:"topic_name"`
-	SchemaJson string `json:"schema_json"`
-}
-
-func (q *Queries) UpsertOperation(ctx context.Context, arg UpsertOperationParams) (Operation, error) {
-	row := q.db.QueryRowContext(ctx, upsertOperation, arg.Name, arg.TopicName, arg.SchemaJson)
-	var i Operation
-	err := row.Scan(
-		&i.Name,
-		&i.TopicName,
-		&i.SchemaJson,
-		&i.CreatedAt,
-	)
-	return i, err
 }

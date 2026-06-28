@@ -31,8 +31,8 @@ func Init(logPath string) error {
 
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
-	InfoLogger = log.New(multiWriter, "[INFO]  ", log.LstdFlags|log.Lshortfile)
-	WarnLogger = log.New(multiWriter, "[WARN]  ", log.LstdFlags|log.Lshortfile)
+	InfoLogger = log.New(multiWriter, "[INFO] ", log.LstdFlags|log.Lshortfile)
+	WarnLogger = log.New(multiWriter, "[WARN] ", log.LstdFlags|log.Lshortfile)
 	ErrorLogger = log.New(multiWriter, "[ERROR] ", log.LstdFlags|log.Lshortfile)
 
 	return nil

@@ -5,61 +5,42 @@
 package generated
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type DeliveryAttempt struct {
-	ID             string         `json:"id"`
-	MessageID      string         `json:"message_id"`
-	SubscriptionID string         `json:"subscription_id"`
-	AttemptNumber  int64          `json:"attempt_number"`
-	StatusCode     sql.NullInt64  `json:"status_code"`
-	ErrorMessage   sql.NullString `json:"error_message"`
-	NextRetryAt    sql.NullTime   `json:"next_retry_at"`
-	Status         string         `json:"status"`
-	CreatedAt      time.Time      `json:"created_at"`
-}
-
-type Dlq struct {
-	ID             string       `json:"id"`
-	MessageID      string       `json:"message_id"`
-	SubscriptionID string       `json:"subscription_id"`
-	LastAttemptID  string       `json:"last_attempt_id"`
-	Reason         string       `json:"reason"`
-	ReplayedAt     sql.NullTime `json:"replayed_at"`
-	CreatedAt      time.Time    `json:"created_at"`
-}
-
 type Message struct {
-	ID            string    `json:"id"`
-	TopicName     string    `json:"topic_name"`
-	OperationName string    `json:"operation_name"`
-	Payload       string    `json:"payload"`
-	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID          uuid.UUID `json:"id"`
+	TopicID     uuid.UUID `json:"topic_id"`
+	OperationID uuid.UUID `json:"operation_id"`
+	Payload     string    `json:"payload"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Operation struct {
+	ID         uuid.UUID `json:"id"`
+	TopicID    uuid.UUID `json:"topic_id"`
 	Name       string    `json:"name"`
-	TopicName  string    `json:"topic_name"`
 	SchemaJson string    `json:"schema_json"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Subscription struct {
-	ID            string    `json:"id"`
-	OperationName string    `json:"operation_name"`
-	ConsumerUrl   string    `json:"consumer_url"`
-	SecretKey     string    `json:"secret_key"`
-	IsActive      int64     `json:"is_active"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID          uuid.UUID `json:"id"`
+	TopicID     uuid.UUID `json:"topic_id"`
+	ConsumerUrl string    `json:"consumer_url"`
+	SecretKey   string    `json:"secret_key"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Topic struct {
+	ID               uuid.UUID `json:"id"`
 	Name             string    `json:"name"`
-	MaxRetries       int64     `json:"max_retries"`
-	BaseIntervalSecs int64     `json:"base_interval_secs"`
-	MaxIntervalSecs  int64     `json:"max_interval_secs"`
+	MaxRetries       int       `json:"max_retries"`
+	BaseIntervalSecs int       `json:"base_interval_secs"`
+	MaxIntervalSecs  int       `json:"max_interval_secs"`
 	CreatedAt        time.Time `json:"created_at"`
 }

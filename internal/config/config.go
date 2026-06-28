@@ -12,11 +12,11 @@ type Config struct {
 	Port               string
 	DBDriver           string
 	DBDSN              string
-	FixturePath        string
 	WorkerCount        int
 	PollIntervalMs     int
 	HTTPTimeoutSeconds int
 	APIKey             string
+	FixtureFile string
 	LogFile            string
 }
 
@@ -30,11 +30,11 @@ func LoadConfig() *Config {
 		Port:               getEnv("PORT", "8080"),
 		DBDriver:           getEnv("DB_DRIVER", "sqlite3"),
 		DBDSN:              getEnv("DB_DSN", "data/goq.db"),
-		FixturePath:        getEnv("FIXTURE_PATH", "build/fixture.json"),
 		WorkerCount:        getEnvInt("WORKER_COUNT", 10),
 		PollIntervalMs:     getEnvInt("POLL_INTERVAL", 500),
 		HTTPTimeoutSeconds: getEnvInt("HTTP_TIMEOUT", 30),
 		APIKey:             getEnv("API_KEY", ""),
+		FixtureFile: getEnv("FIXTURE_FILE", "build/fixture.json"),
 		LogFile:            getEnv("LOG_FILE", "logs/development.log"),
 	}
 

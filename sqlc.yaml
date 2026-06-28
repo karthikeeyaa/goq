@@ -11,3 +11,14 @@ sql:
         emit_prepared_queries: false
         emit_interface: true
         emit_exact_table_names: false
+        overrides:
+          - db_type: "UUID"
+            go_type: "github.com/google/uuid.UUID"
+          - column: "subscriptions.is_active"
+            go_type: "bool"
+          - column: "topics.max_retries"
+            go_type: "int"
+          - column: "topics.base_interval_secs"
+            go_type: "int"
+          - column: "topics.max_interval_secs"
+            go_type: "int"
