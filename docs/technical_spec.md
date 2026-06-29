@@ -688,5 +688,3 @@ The following are out of scope for v1 but worth designing for later:
 | **Mutual TLS** | mTLS support for dispatch requests to consumers that require client certificate authentication. |
 
 ---
-
-*Made by Antigravity*

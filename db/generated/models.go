@@ -5,42 +5,22 @@
 package generated
 
 import (
+	"database/sql"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Message struct {
-	ID          uuid.UUID `json:"id"`
-	TopicID     uuid.UUID `json:"topic_id"`
-	OperationID uuid.UUID `json:"operation_id"`
-	Payload     string    `json:"payload"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
-type Operation struct {
-	ID         uuid.UUID `json:"id"`
-	TopicID    uuid.UUID `json:"topic_id"`
-	Name       string    `json:"name"`
-	SchemaJson string    `json:"schema_json"`
-	CreatedAt  time.Time `json:"created_at"`
-}
-
-type Subscription struct {
-	ID          uuid.UUID `json:"id"`
-	TopicID     uuid.UUID `json:"topic_id"`
-	ConsumerUrl string    `json:"consumer_url"`
-	SecretKey   string    `json:"secret_key"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
+	Offset    int64     `json:"offset"`
+	TopicName string    `json:"topic_name"`
+	Payload   []byte    `json:"payload"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Topic struct {
-	ID               uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	MaxRetries       int       `json:"max_retries"`
-	BaseIntervalSecs int       `json:"base_interval_secs"`
-	MaxIntervalSecs  int       `json:"max_interval_secs"`
-	CreatedAt        time.Time `json:"created_at"`
+	Name             string         `json:"name"`
+	RetentionSeconds int64          `json:"retention_seconds"`
+	ArchiveFile      sql.NullString `json:"archive_file"`
+	Mode             string         `json:"mode"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }

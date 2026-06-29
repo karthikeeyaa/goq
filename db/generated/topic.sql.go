@@ -7,9 +7,44 @@ package generated
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"database/sql"
 )
+
+const createTopic = `-- name: CreateTopic :one
+INSERT INTO topics (
+    name,
+    retention_seconds,
+    archive_file,
+    mode
+) VALUES (?, ?, ?, ?)
+RETURNING name, retention_seconds, archive_file, mode, created_at, updated_at
+`
+
+type CreateTopicParams struct {
+	Name             string         `json:"name"`
+	RetentionSeconds int64          `json:"retention_seconds"`
+	ArchiveFile      sql.NullString `json:"archive_file"`
+	Mode             string         `json:"mode"`
+}
+
+func (q *Queries) CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error) {
+	row := q.db.QueryRowContext(ctx, createTopic,
+		arg.Name,
+		arg.RetentionSeconds,
+		arg.ArchiveFile,
+		arg.Mode,
+	)
+	var i Topic
+	err := row.Scan(
+		&i.Name,
+		&i.RetentionSeconds,
+		&i.ArchiveFile,
+		&i.Mode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
 
 const deleteAllTopics = `-- name: DeleteAllTopics :exec
 DELETE FROM topics
@@ -20,85 +55,40 @@ func (q *Queries) DeleteAllTopics(ctx context.Context) error {
 	return err
 }
 
+const deleteTopic = `-- name: DeleteTopic :exec
+DELETE FROM topics
+WHERE name = ?
+`
+
+func (q *Queries) DeleteTopic(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, deleteTopic, name)
+	return err
+}
+
 const getTopic = `-- name: GetTopic :one
-SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
-WHERE id = ? LIMIT 1
+SELECT name, retention_seconds, archive_file, mode, created_at, updated_at
+FROM topics
+WHERE name = ?
+LIMIT 1
 `
 
-func (q *Queries) GetTopic(ctx context.Context, id uuid.UUID) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, getTopic, id)
+func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
+	row := q.db.QueryRowContext(ctx, getTopic, name)
 	var i Topic
 	err := row.Scan(
-		&i.ID,
 		&i.Name,
-		&i.MaxRetries,
-		&i.BaseIntervalSecs,
-		&i.MaxIntervalSecs,
+		&i.RetentionSeconds,
+		&i.ArchiveFile,
+		&i.Mode,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getTopicByName = `-- name: GetTopicByName :one
-SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
-WHERE name = ? LIMIT 1
-`
-
-func (q *Queries) GetTopicByName(ctx context.Context, name string) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, getTopicByName, name)
-	var i Topic
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.MaxRetries,
-		&i.BaseIntervalSecs,
-		&i.MaxIntervalSecs,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const insertTopic = `-- name: InsertTopic :one
-INSERT INTO topics (
-    id,
-    name,
-    max_retries,
-    base_interval_secs,
-    max_interval_secs
-) VALUES (?, ?, ?, ?, ?)
-RETURNING id, name, max_retries, base_interval_secs, max_interval_secs, created_at
-`
-
-type InsertTopicParams struct {
-	ID               uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	MaxRetries       int       `json:"max_retries"`
-	BaseIntervalSecs int       `json:"base_interval_secs"`
-	MaxIntervalSecs  int       `json:"max_interval_secs"`
-}
-
-func (q *Queries) InsertTopic(ctx context.Context, arg InsertTopicParams) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, insertTopic,
-		arg.ID,
-		arg.Name,
-		arg.MaxRetries,
-		arg.BaseIntervalSecs,
-		arg.MaxIntervalSecs,
-	)
-	var i Topic
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.MaxRetries,
-		&i.BaseIntervalSecs,
-		&i.MaxIntervalSecs,
-		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listTopics = `-- name: ListTopics :many
-SELECT id, name, max_retries, base_interval_secs, max_interval_secs, created_at FROM topics
+SELECT name, retention_seconds, archive_file, mode, created_at, updated_at
+FROM topics
 ORDER BY name ASC
 `
 
@@ -112,12 +102,12 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 	for rows.Next() {
 		var i Topic
 		if err := rows.Scan(
-			&i.ID,
 			&i.Name,
-			&i.MaxRetries,
-			&i.BaseIntervalSecs,
-			&i.MaxIntervalSecs,
+			&i.RetentionSeconds,
+			&i.ArchiveFile,
+			&i.Mode,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

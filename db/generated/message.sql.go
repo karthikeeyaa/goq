@@ -7,85 +7,81 @@ package generated
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"time"
 )
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
-    id,
-    topic_id,
-    operation_id,
-    payload,
-    status
-) VALUES (?, ?, ?, ?, ?)
-RETURNING id, topic_id, operation_id, payload, status, created_at
+    topic_name,
+    payload
+) VALUES (?, ?)
+RETURNING "offset", topic_name, payload, created_at
 `
 
 type CreateMessageParams struct {
-	ID          uuid.UUID `json:"id"`
-	TopicID     uuid.UUID `json:"topic_id"`
-	OperationID uuid.UUID `json:"operation_id"`
-	Payload     string    `json:"payload"`
-	Status      string    `json:"status"`
+	TopicName string `json:"topic_name"`
+	Payload   []byte `json:"payload"`
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, createMessage,
-		arg.ID,
-		arg.TopicID,
-		arg.OperationID,
-		arg.Payload,
-		arg.Status,
-	)
+	row := q.db.QueryRowContext(ctx, createMessage, arg.TopicName, arg.Payload)
 	var i Message
 	err := row.Scan(
-		&i.ID,
-		&i.TopicID,
-		&i.OperationID,
+		&i.Offset,
+		&i.TopicName,
 		&i.Payload,
-		&i.Status,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteMessage = `-- name: DeleteMessage :exec
+const deleteAllMessages = `-- name: DeleteAllMessages :exec
 DELETE FROM messages
-WHERE id = ?
 `
 
-func (q *Queries) DeleteMessage(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteMessage, id)
+func (q *Queries) DeleteAllMessages(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAllMessages)
+	return err
+}
+
+const deleteMessagesBefore = `-- name: DeleteMessagesBefore :exec
+DELETE FROM messages
+WHERE created_at < ?
+`
+
+func (q *Queries) DeleteMessagesBefore(ctx context.Context, createdAt time.Time) error {
+	_, err := q.db.ExecContext(ctx, deleteMessagesBefore, createdAt)
 	return err
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
-WHERE id = ? LIMIT 1
+SELECT "offset", topic_name, payload, created_at
+FROM messages
+WHERE offset = ?
+LIMIT 1
 `
 
-func (q *Queries) GetMessage(ctx context.Context, id uuid.UUID) (Message, error) {
-	row := q.db.QueryRowContext(ctx, getMessage, id)
+func (q *Queries) GetMessage(ctx context.Context, offset int64) (Message, error) {
+	row := q.db.QueryRowContext(ctx, getMessage, offset)
 	var i Message
 	err := row.Scan(
-		&i.ID,
-		&i.TopicID,
-		&i.OperationID,
+		&i.Offset,
+		&i.TopicName,
 		&i.Payload,
-		&i.Status,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const listMessages = `-- name: ListMessages :many
-SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
-ORDER BY created_at DESC
+const listMessagesByTopic = `-- name: ListMessagesByTopic :many
+SELECT "offset", topic_name, payload, created_at
+FROM messages
+WHERE topic_name = ?
+ORDER BY offset ASC
 `
 
-func (q *Queries) ListMessages(ctx context.Context) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, listMessages)
+func (q *Queries) ListMessagesByTopic(ctx context.Context, topicName string) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, listMessagesByTopic, topicName)
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +90,9 @@ func (q *Queries) ListMessages(ctx context.Context) ([]Message, error) {
 	for rows.Next() {
 		var i Message
 		if err := rows.Scan(
-			&i.ID,
-			&i.TopicID,
-			&i.OperationID,
+			&i.Offset,
+			&i.TopicName,
 			&i.Payload,
-			&i.Status,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -114,14 +108,23 @@ func (q *Queries) ListMessages(ctx context.Context) ([]Message, error) {
 	return items, nil
 }
 
-const listMessagesByStatus = `-- name: ListMessagesByStatus :many
-SELECT id, topic_id, operation_id, payload, status, created_at FROM messages
-WHERE status = ?
-ORDER BY created_at DESC
+const pullMessages = `-- name: PullMessages :many
+SELECT "offset", topic_name, payload, created_at
+FROM messages
+WHERE topic_name = ?
+  AND offset > ?
+ORDER BY offset ASC
+LIMIT ?
 `
 
-func (q *Queries) ListMessagesByStatus(ctx context.Context, status string) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, listMessagesByStatus, status)
+type PullMessagesParams struct {
+	TopicName string `json:"topic_name"`
+	Offset    int64  `json:"offset"`
+	Limit     int64  `json:"limit"`
+}
+
+func (q *Queries) PullMessages(ctx context.Context, arg PullMessagesParams) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, pullMessages, arg.TopicName, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +133,9 @@ func (q *Queries) ListMessagesByStatus(ctx context.Context, status string) ([]Me
 	for rows.Next() {
 		var i Message
 		if err := rows.Scan(
-			&i.ID,
-			&i.TopicID,
-			&i.OperationID,
+			&i.Offset,
+			&i.TopicName,
 			&i.Payload,
-			&i.Status,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -148,30 +149,4 @@ func (q *Queries) ListMessagesByStatus(ctx context.Context, status string) ([]Me
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateMessageStatus = `-- name: UpdateMessageStatus :one
-UPDATE messages
-SET status = ?
-WHERE id = ?
-RETURNING id, topic_id, operation_id, payload, status, created_at
-`
-
-type UpdateMessageStatusParams struct {
-	Status string    `json:"status"`
-	ID     uuid.UUID `json:"id"`
-}
-
-func (q *Queries) UpdateMessageStatus(ctx context.Context, arg UpdateMessageStatusParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, updateMessageStatus, arg.Status, arg.ID)
-	var i Message
-	err := row.Scan(
-		&i.ID,
-		&i.TopicID,
-		&i.OperationID,
-		&i.Payload,
-		&i.Status,
-		&i.CreatedAt,
-	)
-	return i, err
 }

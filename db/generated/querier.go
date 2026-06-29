@@ -6,34 +6,21 @@ package generated
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"time"
 )
 
 type Querier interface {
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
-	DeleteAllOperations(ctx context.Context) error
-	DeleteAllSubscriptions(ctx context.Context) error
+	CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error)
+	DeleteAllMessages(ctx context.Context) error
 	DeleteAllTopics(ctx context.Context) error
-	DeleteMessage(ctx context.Context, id uuid.UUID) error
-	GetMessage(ctx context.Context, id uuid.UUID) (Message, error)
-	GetOperation(ctx context.Context, id uuid.UUID) (Operation, error)
-	GetOperationByName(ctx context.Context, name string) (Operation, error)
-	GetSubscription(ctx context.Context, id uuid.UUID) (Subscription, error)
-	GetSubscriptionByUniqueKey(ctx context.Context, arg GetSubscriptionByUniqueKeyParams) (Subscription, error)
-	GetTopic(ctx context.Context, id uuid.UUID) (Topic, error)
-	GetTopicByName(ctx context.Context, name string) (Topic, error)
-	InsertOperation(ctx context.Context, arg InsertOperationParams) (Operation, error)
-	InsertSubscription(ctx context.Context, arg InsertSubscriptionParams) (Subscription, error)
-	InsertTopic(ctx context.Context, arg InsertTopicParams) (Topic, error)
-	ListActiveSubscriptionsForTopic(ctx context.Context, topicID uuid.UUID) ([]Subscription, error)
-	ListMessages(ctx context.Context) ([]Message, error)
-	ListMessagesByStatus(ctx context.Context, status string) ([]Message, error)
-	ListOperations(ctx context.Context) ([]Operation, error)
-	ListOperationsByTopic(ctx context.Context, topicID uuid.UUID) ([]Operation, error)
-	ListSubscriptions(ctx context.Context) ([]Subscription, error)
+	DeleteMessagesBefore(ctx context.Context, createdAt time.Time) error
+	DeleteTopic(ctx context.Context, name string) error
+	GetMessage(ctx context.Context, offset int64) (Message, error)
+	GetTopic(ctx context.Context, name string) (Topic, error)
+	ListMessagesByTopic(ctx context.Context, topicName string) ([]Message, error)
 	ListTopics(ctx context.Context) ([]Topic, error)
-	UpdateMessageStatus(ctx context.Context, arg UpdateMessageStatusParams) (Message, error)
+	PullMessages(ctx context.Context, arg PullMessagesParams) ([]Message, error)
 }
 
 var _ Querier = (*Queries)(nil)

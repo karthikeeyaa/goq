@@ -15,9 +15,10 @@ type Config struct {
 	WorkerCount        int
 	PollIntervalMs     int
 	HTTPTimeoutSeconds int
-	APIKey             string
-	FixtureFile string
+	IntegrationKey     string
+	FixtureFile        string
 	LogFile            string
+	ArchiveFolder 	   string
 }
 
 var AppConfig *Config
@@ -33,9 +34,10 @@ func LoadConfig() *Config {
 		WorkerCount:        getEnvInt("WORKER_COUNT", 10),
 		PollIntervalMs:     getEnvInt("POLL_INTERVAL", 500),
 		HTTPTimeoutSeconds: getEnvInt("HTTP_TIMEOUT", 30),
-		APIKey:             getEnv("API_KEY", ""),
-		FixtureFile: getEnv("FIXTURE_FILE", "build/fixture.json"),
+		IntegrationKey:     getEnv("INTEGRATION_KEY", ""),
+		FixtureFile:        getEnv("FIXTURE_FILE", "build/fixture.json"),
 		LogFile:            getEnv("LOG_FILE", "logs/development.log"),
+		ArchiveFolder: 		getEnv("ARCHIVE_FOLDER", "archive"),
 	}
 
 	return AppConfig

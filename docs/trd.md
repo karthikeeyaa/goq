@@ -5,50 +5,64 @@
 
 ## Requirements
 
-- A subscription based producer-consumer message queue service.
-- Producer will publish the message to the queue, consumer will take the messages and send to subscribers webhook url
-- Every topic will have a separate queue. There can be multiple topics
-- Each topic have an identifier using which publisher will send messages
-- Every topic have a subscriber
-- Payload in each operation is type safe, mismatch in payload when posting will cause error.
-- Messages sent to subscriber will have retry mechanism, exponential backoff. Crossing max retries will send the message to DLQ
+* A lightweight subscription-based message broker inspired by log-based messaging systems.
+* Producers publish messages to a topic.
+* Consumers pull messages from a topic using offsets.
+* Every topic represents an independent append-only message log.
+* Each topic has a unique identifier used by producers and consumers.
+* Payloads are type-safe. Invalid payloads are rejected during ingestion.
+* Messages are retained for a configurable duration before being archived and removed from the active store.
+* Consumers maintain their own offsets and can replay messages by requesting an earlier offset.
+* If no offset is provided while pulling, the topic's configured latest offset is used.
 
 ### Flow Breakdown
-1. **Publish Event**: The producer sends a type-safe JSON payload to `gosub` targeting a specific **Operation**.
-2. **Persistence**: `gosub` persists the message to the database immediately to prevent loss.
-3. **Producer Acknowledgment**: The system responds with an HTTP `202 Accepted` to the producer.
-4. **Processing**: An asynchronous worker pool polls the database for pending deliveries.
-5. **Subscription Resolution**: The worker looks up all active HTTP subscriptions associated with the operation name and topic.
-6. **Delivery**: The worker builds an HTTP POST request, generates an HMAC signature of the payload, and sends it to the consumer URL.
-7. **Resolution**:
-    - **Success (2xx)**: The delivery is marked as succeeded.
-    - **Failure (Non-2xx or Timeout)**: The delivery is scheduled for retry with exponential backoff.
-    - **Max Retries Exceeded**: The message is moved to a Dead Letter Queue (DLQ).
----
 
+1. **Publish Event**: The producer sends a type-safe JSON payload to `gosub` targeting a specific topic.
+2. **Validation**: The payload is validated against the topic's configured JSON schema.
+3. **Persistence**: `gosub` appends the message to the SQLite message log.
+4. **Producer Acknowledgment**: The system responds with HTTP `202 Accepted`.
+5. **Pull Request**: A consumer requests messages using a topic name, last processed offset, and batch limit.
+6. **Message Retrieval**: `gosub` returns all messages whose offsets are greater than the supplied offset.
+7. **Retention**: A background retention worker periodically archives expired messages to disk and removes them from the active SQLite store.
+
+---
 
 ## Low level
 
 1. Golang
 2. SQLite (sqlc) - `modernc.org/sqlite`
 3. Chi router - `go.chi.dev/chi/v5`
-4. JSON Schema validation using `github.com/xeipuuv/gojsonschema` to validate JSON payloads on message ingestion.
-5. Ingest and Management API Server: HTTP server implementing standard Chi middlewares for logging, recovery, and optional API key verification via header `X-Gosub-Api-Key`.
-6. Database Schema & Migrations: Portable SQLite schema using `modernc.org/sqlite` (pure Go driver) and standard SQL migrations stored in `/migrations`, run automatically at startup.
-7. SQLC for Type-Safe Database Queries: Auto-generated database queries in `db/generated` from queries defined in `db/query` against the database schema.
-8. Background Dispatcher & Worker Pool: Polling-based worker pool that retrieves pending attempts, dispatches HTTP POST webhooks, performs HMAC signature generation, and handles retries with exponential backoff and jitter.
-9. Webhook Security and Signing: HMAC-SHA256 signature generation using `crypto/hmac` to sign payloads, sent via `X-Gosub-Signature` header along with `X-Gosub-Timestamp` to prevent replay attacks.
-10. Concurrency Semaphores: Webhook dispatch rate-limiting per subscriber using `golang.org/x/sync/semaphore` to protect slow consumers from being overwhelmed.
-11. DLQ (Dead Letter Queue): Terminal storage for messages that exhaust their retry attempts, exposing inspection and programmatic replay endpoints.
-12. Project Package Layout:
-    * `cmd/gosub`: Application entry point (`main.go`).
-    * `db/query/`: SQL source queries for SQLC.
-    * `db/generated/`: Auto-generated database access code.
-    * `migrations/`: Raw SQL migration files.
-    * `internal/config/`: Configuration parsing from environment variables.
-    * `internal/db/`: SQLite driver setup, database connection pool, and migrations execution.
-    * `internal/fixture/`: Deployment contract parser (`fixture.json`) and database synchronizer.
-    * `internal/api/`: REST endpoints, routes, middleware, and handlers.
-    * `internal/crypto/`: HMAC signing utility.
-    * `internal/workers/`: Dispatcher and consumer worker pool.
-    * `internal/models/`: Shared models, status constants, and request/response payloads.
+5. HTTP API Server implementing publish, pull, and topic management endpoints with standard Chi middleware.
+6. Database Schema & Migrations using SQLite with automatic startup migrations.
+7. SQLC for type-safe database access.
+8. Offset-based message retrieval using indexed sequential queries on `(topic_name, offset)`.
+9. Background Retention Worker responsible for:
+
+   * archiving expired messages to append-only files
+   * deleting archived messages from SQLite
+   * updating topic metadata where required
+10. Binary payload storage using SQLite BLOB columns to avoid unnecessary serialization.
+11. Configurable retention per topic.
+12. Archive files stored per topic for long-term persistence and optional offline replay.
+
+---
+
+## Phase 2 (Reliability Layer)
+
+A separate worker service can be enabled to add push-based delivery capabilities.
+
+Features:
+
+1. Push
+
+   * HTTP webhook subscriptions
+   * Background dispatcher
+   * HMAC request signing
+   * Retry with exponential backoff
+   * Dead Letter Queue (DLQ)
+
+2. Replay from archived messages
+
+
+
+Post that kinda triggered me: https://x.com/ChShersh/status/2071531589972922686

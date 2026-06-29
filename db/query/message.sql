@@ -1,32 +1,33 @@
 -- name: CreateMessage :one
 INSERT INTO messages (
-    id,
-    topic_id,
-    operation_id,
-    payload,
-    status
-) VALUES (?, ?, ?, ?, ?)
+    topic_name,
+    payload
+) VALUES (?, ?)
 RETURNING *;
 
 -- name: GetMessage :one
-SELECT * FROM messages
-WHERE id = ? LIMIT 1;
+SELECT *
+FROM messages
+WHERE offset = ?
+LIMIT 1;
 
--- name: UpdateMessageStatus :one
-UPDATE messages
-SET status = ?
-WHERE id = ?
-RETURNING *;
+-- name: PullMessages :many
+SELECT *
+FROM messages
+WHERE topic_name = ?
+  AND offset > ?
+ORDER BY offset ASC
+LIMIT ?;
 
--- name: ListMessagesByStatus :many
-SELECT * FROM messages
-WHERE status = ?
-ORDER BY created_at DESC;
+-- name: ListMessagesByTopic :many
+SELECT *
+FROM messages
+WHERE topic_name = ?
+ORDER BY offset ASC;
 
--- name: ListMessages :many
-SELECT * FROM messages
-ORDER BY created_at DESC;
-
--- name: DeleteMessage :exec
+-- name: DeleteMessagesBefore :exec
 DELETE FROM messages
-WHERE id = ?;
+WHERE created_at < ?;
+
+-- name: DeleteAllMessages :exec
+DELETE FROM messages;

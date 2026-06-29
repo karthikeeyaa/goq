@@ -2,132 +2,15 @@
     "topics": [
         {
             "name": "payments",
-            "max_retries": 5,
-            "base_interval_secs": 10,
-            "max_interval_secs": 3600
+            "mode": "pull",
+            "archive_file": "payments.archive.db",
+            "retention": 86400
         },
         {
             "name": "invoices",
-            "max_retries": 3,
-            "base_interval_secs": 15,
-            "max_interval_secs": 1800
-        }
-    ],
-    "operations": [
-        {
-            "name": "payment.success",
-            "topic_name": "payments",
-            "schema_json": {
-                "type": "object",
-                "required": [
-                    "id",
-                    "customer_id",
-                    "amount",
-                    "currency",
-                    "timestamp"
-                ],
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "customer_id": {
-                        "type": "string"
-                    },
-                    "amount": {
-                        "type": "integer"
-                    },
-                    "currency": {
-                        "type": "string"
-                    },
-                    "timestamp": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        {
-            "name": "payment.fail",
-            "topic_name": "payments",
-            "schema_json": {
-                "type": "object",
-                "required": [
-                    "id",
-                    "customer_id",
-                    "amount",
-                    "currency",
-                    "failure_reason",
-                    "timestamp"
-                ],
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "customer_id": {
-                        "type": "string"
-                    },
-                    "amount": {
-                        "type": "integer"
-                    },
-                    "currency": {
-                        "type": "string"
-                    },
-                    "failure_reason": {
-                        "type": "string"
-                    },
-                    "timestamp": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        {
-            "name": "invoice.generated",
-            "topic_name": "invoices",
-            "schema_json": {
-                "type": "object",
-                "required": [
-                    "id",
-                    "customer_id",
-                    "amount",
-                    "status",
-                    "due_date",
-                    "timestamp"
-                ],
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "customer_id": {
-                        "type": "string"
-                    },
-                    "amount": {
-                        "type": "integer"
-                    },
-                    "status": {
-                        "type": "string"
-                    },
-                    "due_date": {
-                        "type": "string"
-                    },
-                    "timestamp": {
-                        "type": "integer"
-                    }
-                }
-            }
-        }
-    ],
-    "subscriptions": [
-        {
-            "topic_name": "payments",
-            "consumer_url": "http://localhost:8081/webhooks/payments",
-            "secret_key": "payments-dummy-signing-secret",
-            "is_active": true
-        },
-        {
-            "topic_name": "invoices",
-            "consumer_url": "http://localhost:8081/webhooks/invoices",
-            "secret_key": "invoices-dummy-signing-secret",
-            "is_active": true
+            "mode": "pull",
+            "archive_file": "invoices.archive.db",
+            "retention": 86400
         }
     ]
 }
