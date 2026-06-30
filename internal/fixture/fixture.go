@@ -12,10 +12,11 @@ import (
 )
 
 type Topic struct {
-	Name             string `json:"name"`
-	Mode             string `json:"mode"`
-	ArchiveFile      string `json:"archive_file"`
-	RetentionSeconds int64  `json:"retention"`
+	Name             string          `json:"name"`
+	Mode             string          `json:"mode"`
+	RetentionSeconds int64           `json:"retention"`
+	SchemaValidation bool            `json:"schema_validation"`
+	SchemaJSON       json.RawMessage `json:"schema_json,omitempty"`
 }
 
 type Fixture struct {
@@ -23,7 +24,7 @@ type Fixture struct {
 }
 
 func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err error) {
-	if _, err := os.Stat(fixtureFile); os.IsNotExist(err) {
+	if _, statErr := os.Stat(fixtureFile); os.IsNotExist(statErr) {
 		return fmt.Errorf("fixture file not found: %s", fixtureFile)
 	}
 
@@ -36,6 +37,26 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 
 	if err := json.Unmarshal(bytes, &fixture); err != nil {
 		return fmt.Errorf("unable to unmarshal fixture file: %w", err)
+	}
+
+	for _, t := range fixture.Topics {
+		if t.Name == "" {
+			return fmt.Errorf("fixture contains a topic with an empty name")
+		}
+		if t.Mode != "pull" && t.Mode != "push" {
+			return fmt.Errorf("topic %q has invalid mode %q (must be 'pull' or 'push')", t.Name, t.Mode)
+		}
+		if t.RetentionSeconds <= 0 {
+			return fmt.Errorf("topic %q has invalid retention_seconds %d (must be > 0)", t.Name, t.RetentionSeconds)
+		}
+		if t.SchemaValidation {
+			if len(t.SchemaJSON) == 0 {
+				return fmt.Errorf("topic %q has schema_validation=true but no schema_json provided", t.Name)
+			}
+			if !json.Valid(t.SchemaJSON) {
+				return fmt.Errorf("topic %q has malformed schema_json", t.Name)
+			}
+		}
 	}
 
 	logger.Printf("Creating %d topics from fixture.", len(fixture.Topics))
@@ -67,11 +88,22 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 	logger.Println("Cleared existing topics.")
 
 	for _, t := range fixture.Topics {
+		schemaValidation := int64(0)
+		if t.SchemaValidation {
+			schemaValidation = 1
+		}
+
+		var schemaJSON sql.NullString
+		if len(t.SchemaJSON) > 0 {
+			schemaJSON = sql.NullString{String: string(t.SchemaJSON), Valid: true}
+		}
+
 		_, err = queries.CreateTopic(ctx, generated.CreateTopicParams{
 			Name:             t.Name,
-			RetentionSeconds: t.RetentionSeconds,
-			ArchiveFile:      sql.NullString{String: t.ArchiveFile, Valid: t.ArchiveFile != ""},
 			Mode:             t.Mode,
+			RetentionSeconds: t.RetentionSeconds,
+			SchemaValidation: schemaValidation,
+			SchemaJson:       schemaJSON,
 		})
 
 		if err != nil {

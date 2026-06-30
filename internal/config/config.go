@@ -16,9 +16,10 @@ type Config struct {
 	PollIntervalMs     int
 	HTTPTimeoutSeconds int
 	IntegrationKey     string
+	ArchiveChunkSize   int
 	FixtureFile        string
 	LogFile            string
-	ArchiveFolder 	   string
+	ArchiveFolder      string
 }
 
 var AppConfig *Config
@@ -35,9 +36,10 @@ func LoadConfig() *Config {
 		PollIntervalMs:     getEnvInt("POLL_INTERVAL", 500),
 		HTTPTimeoutSeconds: getEnvInt("HTTP_TIMEOUT", 30),
 		IntegrationKey:     getEnv("INTEGRATION_KEY", ""),
+		ArchiveChunkSize:   getEnvInt("ARCHIVE_CHUNK_SIZE", 50000),
 		FixtureFile:        getEnv("FIXTURE_FILE", "build/fixture.json"),
 		LogFile:            getEnv("LOG_FILE", "logs/development.log"),
-		ArchiveFolder: 		getEnv("ARCHIVE_FOLDER", "archive"),
+		ArchiveFolder:      getEnv("ARCHIVE_FOLDER", "archive"),
 	}
 
 	return AppConfig

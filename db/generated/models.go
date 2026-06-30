@@ -18,9 +18,10 @@ type Message struct {
 
 type Topic struct {
 	Name             string         `json:"name"`
-	RetentionSeconds int64          `json:"retention_seconds"`
-	ArchiveFile      sql.NullString `json:"archive_file"`
 	Mode             string         `json:"mode"`
+	RetentionSeconds int64          `json:"retention_seconds"`
+	SchemaValidation int64          `json:"schema_validation"`
+	SchemaJson       sql.NullString `json:"schema_json"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 }

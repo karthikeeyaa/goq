@@ -5,9 +5,6 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/xeipuuv/gojsonschema"
-	"golang.org/x/sync/semaphore"
 
 	"goq/internal/config"
 	"goq/internal/db"
@@ -49,9 +46,6 @@ func main() {
 	logger.Info("Successfully created fixtures.")
 
 	_ = chi.NewRouter()
-	_ = uuid.New()
-	_ = gojsonschema.NewGoLoader(nil)
-	_ = semaphore.NewWeighted(1)
 
 	logger.Info("All systems initialized successfully.")
 }

@@ -13,33 +13,37 @@ import (
 const createTopic = `-- name: CreateTopic :one
 INSERT INTO topics (
     name,
+    mode,
     retention_seconds,
-    archive_file,
-    mode
-) VALUES (?, ?, ?, ?)
-RETURNING name, retention_seconds, archive_file, mode, created_at, updated_at
+    schema_validation,
+    schema_json
+) VALUES (?, ?, ?, ?, ?)
+RETURNING name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
 `
 
 type CreateTopicParams struct {
 	Name             string         `json:"name"`
-	RetentionSeconds int64          `json:"retention_seconds"`
-	ArchiveFile      sql.NullString `json:"archive_file"`
 	Mode             string         `json:"mode"`
+	RetentionSeconds int64          `json:"retention_seconds"`
+	SchemaValidation int64          `json:"schema_validation"`
+	SchemaJson       sql.NullString `json:"schema_json"`
 }
 
 func (q *Queries) CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error) {
 	row := q.db.QueryRowContext(ctx, createTopic,
 		arg.Name,
-		arg.RetentionSeconds,
-		arg.ArchiveFile,
 		arg.Mode,
+		arg.RetentionSeconds,
+		arg.SchemaValidation,
+		arg.SchemaJson,
 	)
 	var i Topic
 	err := row.Scan(
 		&i.Name,
-		&i.RetentionSeconds,
-		&i.ArchiveFile,
 		&i.Mode,
+		&i.RetentionSeconds,
+		&i.SchemaValidation,
+		&i.SchemaJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -66,7 +70,7 @@ func (q *Queries) DeleteTopic(ctx context.Context, name string) error {
 }
 
 const getTopic = `-- name: GetTopic :one
-SELECT name, retention_seconds, archive_file, mode, created_at, updated_at
+SELECT name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
 FROM topics
 WHERE name = ?
 LIMIT 1
@@ -77,9 +81,10 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 	var i Topic
 	err := row.Scan(
 		&i.Name,
-		&i.RetentionSeconds,
-		&i.ArchiveFile,
 		&i.Mode,
+		&i.RetentionSeconds,
+		&i.SchemaValidation,
+		&i.SchemaJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -87,7 +92,7 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 }
 
 const listTopics = `-- name: ListTopics :many
-SELECT name, retention_seconds, archive_file, mode, created_at, updated_at
+SELECT name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
 FROM topics
 ORDER BY name ASC
 `
@@ -103,9 +108,10 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 		var i Topic
 		if err := rows.Scan(
 			&i.Name,
-			&i.RetentionSeconds,
-			&i.ArchiveFile,
 			&i.Mode,
+			&i.RetentionSeconds,
+			&i.SchemaValidation,
+			&i.SchemaJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

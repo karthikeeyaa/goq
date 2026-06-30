@@ -1,10 +1,11 @@
 -- name: CreateTopic :one
 INSERT INTO topics (
     name,
+    mode,
     retention_seconds,
-    archive_file,
-    mode
-) VALUES (?, ?, ?, ?)
+    schema_validation,
+    schema_json
+) VALUES (?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetTopic :one
