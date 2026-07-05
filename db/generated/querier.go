@@ -6,21 +6,15 @@ package generated
 
 import (
 	"context"
-	"time"
 )
 
 type Querier interface {
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
-	CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error)
-	DeleteAllMessages(ctx context.Context) error
-	DeleteAllTopics(ctx context.Context) error
-	DeleteMessagesBefore(ctx context.Context, createdAt time.Time) error
-	DeleteTopic(ctx context.Context, name string) error
-	GetMessage(ctx context.Context, offset int64) (Message, error)
+	GetEarliestOffset(ctx context.Context, topicName string) (interface{}, error)
+	GetHeadOffset(ctx context.Context, topicName string) (interface{}, error)
 	GetTopic(ctx context.Context, name string) (Topic, error)
-	ListMessagesByTopic(ctx context.Context, topicName string) ([]Message, error)
-	ListTopics(ctx context.Context) ([]Topic, error)
 	PullMessages(ctx context.Context, arg PullMessagesParams) ([]Message, error)
+	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }
 
 var _ Querier = (*Queries)(nil)

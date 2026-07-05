@@ -1,0 +1,24 @@
+info:
+  name: Publish
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/v1/publish/payments/"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "test",
+        "customer_id": "kv_123",
+        "amount": "56",
+        "currency": "INR"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

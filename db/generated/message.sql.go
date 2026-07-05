@@ -7,7 +7,6 @@ package generated
 
 import (
 	"context"
-	"time"
 )
 
 const createMessage = `-- name: CreateMessage :one
@@ -35,77 +34,30 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	return i, err
 }
 
-const deleteAllMessages = `-- name: DeleteAllMessages :exec
-DELETE FROM messages
-`
-
-func (q *Queries) DeleteAllMessages(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteAllMessages)
-	return err
-}
-
-const deleteMessagesBefore = `-- name: DeleteMessagesBefore :exec
-DELETE FROM messages
-WHERE created_at < ?
-`
-
-func (q *Queries) DeleteMessagesBefore(ctx context.Context, createdAt time.Time) error {
-	_, err := q.db.ExecContext(ctx, deleteMessagesBefore, createdAt)
-	return err
-}
-
-const getMessage = `-- name: GetMessage :one
-SELECT "offset", topic_name, payload, created_at
-FROM messages
-WHERE offset = ?
-LIMIT 1
-`
-
-func (q *Queries) GetMessage(ctx context.Context, offset int64) (Message, error) {
-	row := q.db.QueryRowContext(ctx, getMessage, offset)
-	var i Message
-	err := row.Scan(
-		&i.Offset,
-		&i.TopicName,
-		&i.Payload,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const listMessagesByTopic = `-- name: ListMessagesByTopic :many
-SELECT "offset", topic_name, payload, created_at
+const getEarliestOffset = `-- name: GetEarliestOffset :one
+SELECT COALESCE(MIN(offset), 0) AS earliest_offset
 FROM messages
 WHERE topic_name = ?
-ORDER BY offset ASC
 `
 
-func (q *Queries) ListMessagesByTopic(ctx context.Context, topicName string) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, listMessagesByTopic, topicName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Message
-	for rows.Next() {
-		var i Message
-		if err := rows.Scan(
-			&i.Offset,
-			&i.TopicName,
-			&i.Payload,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetEarliestOffset(ctx context.Context, topicName string) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getEarliestOffset, topicName)
+	var earliest_offset interface{}
+	err := row.Scan(&earliest_offset)
+	return earliest_offset, err
+}
+
+const getHeadOffset = `-- name: GetHeadOffset :one
+SELECT COALESCE(MAX(offset), 0) AS head_offset
+FROM messages
+WHERE topic_name = ?
+`
+
+func (q *Queries) GetHeadOffset(ctx context.Context, topicName string) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getHeadOffset, topicName)
+	var head_offset interface{}
+	err := row.Scan(&head_offset)
+	return head_offset, err
 }
 
 const pullMessages = `-- name: PullMessages :many

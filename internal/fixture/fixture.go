@@ -59,7 +59,7 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 		}
 	}
 
-	logger.Printf("Creating %d topics from fixture.", len(fixture.Topics))
+	logger.Printf("Running fixtures on %d topics", len(fixture.Topics))
 
 	ctx := context.Background()
 
@@ -81,12 +81,6 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 		}
 	}()
 
-	if err = queries.DeleteAllTopics(ctx); err != nil {
-		return fmt.Errorf("failed to delete topics: %w", err)
-	}
-
-	logger.Println("Cleared existing topics.")
-
 	for _, t := range fixture.Topics {
 		schemaValidation := int64(0)
 		if t.SchemaValidation {
@@ -98,7 +92,7 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 			schemaJSON = sql.NullString{String: string(t.SchemaJSON), Valid: true}
 		}
 
-		_, err = queries.CreateTopic(ctx, generated.CreateTopicParams{
+		err = queries.UpsertTopic(ctx, generated.UpsertTopicParams{
 			Name:             t.Name,
 			Mode:             t.Mode,
 			RetentionSeconds: t.RetentionSeconds,
@@ -107,7 +101,7 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 		})
 
 		if err != nil {
-			return fmt.Errorf("failed to insert topic %s: %w", t.Name, err)
+			return fmt.Errorf("failed to upsert topic %s: %w", t.Name, err)
 		}
 	}
 

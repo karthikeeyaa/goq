@@ -5,12 +5,6 @@ INSERT INTO messages (
 ) VALUES (?, ?)
 RETURNING *;
 
--- name: GetMessage :one
-SELECT *
-FROM messages
-WHERE offset = ?
-LIMIT 1;
-
 -- name: PullMessages :many
 SELECT *
 FROM messages
@@ -19,15 +13,12 @@ WHERE topic_name = ?
 ORDER BY offset ASC
 LIMIT ?;
 
--- name: ListMessagesByTopic :many
-SELECT *
+-- name: GetHeadOffset :one
+SELECT COALESCE(MAX(offset), 0) AS head_offset
 FROM messages
-WHERE topic_name = ?
-ORDER BY offset ASC;
+WHERE topic_name = ?;
 
--- name: DeleteMessagesBefore :exec
-DELETE FROM messages
-WHERE created_at < ?;
-
--- name: DeleteAllMessages :exec
-DELETE FROM messages;
+-- name: GetEarliestOffset :one
+SELECT COALESCE(MIN(offset), 0) AS earliest_offset
+FROM messages
+WHERE topic_name = ?;

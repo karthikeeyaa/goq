@@ -4,8 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/go-chi/chi/v5"
-
+	"goq/internal/api"
 	"goq/internal/config"
 	"goq/internal/db"
 	"goq/internal/fixture"
@@ -45,7 +44,8 @@ func main() {
 	}
 	logger.Info("Successfully created fixtures.")
 
-	_ = chi.NewRouter()
-
-	logger.Info("All systems initialized successfully.")
+	if err := api.StartServer(cfg, database, logger.InfoLogger); err != nil {
+		logger.Error("HTTP server error: %v", err)
+		os.Exit(1)
+	}
 }

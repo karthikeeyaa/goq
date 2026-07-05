@@ -1,4 +1,5 @@
 .env
 build
 *.db
+*.db*
 *.log

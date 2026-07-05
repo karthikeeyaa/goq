@@ -10,65 +10,6 @@ import (
 	"database/sql"
 )
 
-const createTopic = `-- name: CreateTopic :one
-INSERT INTO topics (
-    name,
-    mode,
-    retention_seconds,
-    schema_validation,
-    schema_json
-) VALUES (?, ?, ?, ?, ?)
-RETURNING name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
-`
-
-type CreateTopicParams struct {
-	Name             string         `json:"name"`
-	Mode             string         `json:"mode"`
-	RetentionSeconds int64          `json:"retention_seconds"`
-	SchemaValidation int64          `json:"schema_validation"`
-	SchemaJson       sql.NullString `json:"schema_json"`
-}
-
-func (q *Queries) CreateTopic(ctx context.Context, arg CreateTopicParams) (Topic, error) {
-	row := q.db.QueryRowContext(ctx, createTopic,
-		arg.Name,
-		arg.Mode,
-		arg.RetentionSeconds,
-		arg.SchemaValidation,
-		arg.SchemaJson,
-	)
-	var i Topic
-	err := row.Scan(
-		&i.Name,
-		&i.Mode,
-		&i.RetentionSeconds,
-		&i.SchemaValidation,
-		&i.SchemaJson,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const deleteAllTopics = `-- name: DeleteAllTopics :exec
-DELETE FROM topics
-`
-
-func (q *Queries) DeleteAllTopics(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteAllTopics)
-	return err
-}
-
-const deleteTopic = `-- name: DeleteTopic :exec
-DELETE FROM topics
-WHERE name = ?
-`
-
-func (q *Queries) DeleteTopic(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, deleteTopic, name)
-	return err
-}
-
 const getTopic = `-- name: GetTopic :one
 SELECT name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
 FROM topics
@@ -91,39 +32,32 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 	return i, err
 }
 
-const listTopics = `-- name: ListTopics :many
-SELECT name, mode, retention_seconds, schema_validation, schema_json, created_at, updated_at
-FROM topics
-ORDER BY name ASC
+const upsertTopic = `-- name: UpsertTopic :exec
+INSERT INTO topics (name, mode, retention_seconds, schema_validation, schema_json)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(name) DO UPDATE SET
+    mode = excluded.mode,
+    retention_seconds = excluded.retention_seconds,
+    schema_validation = excluded.schema_validation,
+    schema_json = excluded.schema_json,
+    updated_at = CURRENT_TIMESTAMP
 `
 
-func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
-	rows, err := q.db.QueryContext(ctx, listTopics)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Topic
-	for rows.Next() {
-		var i Topic
-		if err := rows.Scan(
-			&i.Name,
-			&i.Mode,
-			&i.RetentionSeconds,
-			&i.SchemaValidation,
-			&i.SchemaJson,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type UpsertTopicParams struct {
+	Name             string         `json:"name"`
+	Mode             string         `json:"mode"`
+	RetentionSeconds int64          `json:"retention_seconds"`
+	SchemaValidation int64          `json:"schema_validation"`
+	SchemaJson       sql.NullString `json:"schema_json"`
+}
+
+func (q *Queries) UpsertTopic(ctx context.Context, arg UpsertTopicParams) error {
+	_, err := q.db.ExecContext(ctx, upsertTopic,
+		arg.Name,
+		arg.Mode,
+		arg.RetentionSeconds,
+		arg.SchemaValidation,
+		arg.SchemaJson,
+	)
+	return err
 }

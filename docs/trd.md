@@ -114,5 +114,3 @@ This table is intentionally deferred to Phase 2 — Phase 1 pull consumers remai
 * Enables full historical replay within whatever archive retention policy is configured, independent of the hot-path retention window.
 
 ---
-
-Post that kinda triggered me: https://x.com/ChShersh/status/2071531589972922686
