@@ -2,30 +2,13 @@
     "topics": [
         {
             "name": "payments",
-            "mode": "pull",
-            "retention": 86400,
-            "schema_validation": false
+            "retention_ms": 86400000,
+            "cleanup_policy": "delete"
         },
         {
             "name": "invoices",
-            "mode": "pull",
-            "retention": 86400,
-            "schema_validation": true,
-            "schema_json": {
-                "type": "object",
-                "required": ["id", "customer_id", "amount", "currency", "status", "due_date", "timestamp"],
-                "properties": {
-                    "id": { "type": "string", "required": true },
-                    "customer_id": { "type": "string", "required": true },
-                    "amount": { "type": "integer", "required": true },
-                    "currency": { "type": "string", "required": true },
-                    "status": { "type": "string", "required": true, "enum": ["draft", "sent", "paid", "overdue", "cancelled"] },
-                    "due_date": { "type": "string", "required": true, "format": "date" },
-                    "issued_date": { "type": "string", "required": false, "format": "date" },
-                    "timestamp": { "type": "integer", "required": true },
-                    "line_items": { "type": "array", "required": false }
-                }
-            }
+            "retention_ms": 172800000,
+            "cleanup_policy": "delete"
         }
     ]
 }

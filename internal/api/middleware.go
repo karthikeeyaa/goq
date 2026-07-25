@@ -4,18 +4,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
-	"goq/db/generated"
+	"goq/db/store"
 	"goq/internal/logger"
 )
 
-// look up the {topic} URL param,
-// verifies the topic exists in the database, 
-// and stash the generated.Topic in the request context
-func TopicValidation(queries *generated.Queries) func(http.Handler) http.Handler {
+// set topic to context
+func ValidateTopic(queries *store.Queries) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			topicName := chi.URLParam(r, "topic")
@@ -50,7 +49,11 @@ func TopicValidation(queries *generated.Queries) func(http.Handler) http.Handler
 func RequestLogger(l *log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			l.Printf("%s %s %s", r.Method, r.URL.Path, r.RemoteAddr)
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				ip = r.RemoteAddr
+			}
+			l.Printf("%s %s %s", r.Method, r.URL.Path, ip)
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -64,4 +67,27 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+func AuthMiddleware(integrationKey, mode string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if mode == "development" || integrationKey == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			authHeader := r.Header.Get("Authorization")
+			expectedHeader := "token " + integrationKey
+
+			if authHeader != expectedHeader {
+				writeJSON(w, http.StatusUnauthorized, ErrorResponse{
+					Error: "unauthorized",
+				})
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

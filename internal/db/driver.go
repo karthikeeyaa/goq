@@ -35,7 +35,8 @@ func Connect(dsn string, logger *log.Logger) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 	
-	_, err = db.Exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
+	// journal_mode=WAL to activate write ahead log
+	_, err = db.Exec("PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=ON;")
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to configure sqlite PRAGMAs: %w", err)

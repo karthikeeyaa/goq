@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"goq/migrations"
+	"goq/schema"
 )
 
 func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) (int, error) {
@@ -26,7 +26,7 @@ func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) (int, er
 	}
 
 	// 2. Read embedded migrations files
-	files, err := fs.ReadDir(migrations.FS, ".")
+	files, err := fs.ReadDir(schema.FS, ".")
 	if err != nil {
 		return 0, fmt.Errorf("failed to read migrations directory: %w", err)
 	}
@@ -56,7 +56,7 @@ func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) (int, er
 
 		logger.Printf("Applying database migration: %s", filename)
 
-		content, err := fs.ReadFile(migrations.FS, filename)
+		content, err := fs.ReadFile(schema.FS, filename)
 		if err != nil {
 			return 0, fmt.Errorf("failed to read migration file %s: %w", filename, err)
 		}

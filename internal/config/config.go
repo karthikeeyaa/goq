@@ -2,24 +2,34 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	AppName            string
-	Port               string
-	DBDriver           string
-	DBDSN              string
-	WorkerCount        int
-	PollIntervalMs     int
+	AppName string
+	Port    string
+	LogFile string
+	Version string
+	Mode    string
+
+	// HTTP
 	HTTPTimeoutSeconds int
 	IntegrationKey     string
-	ArchiveChunkSize   int
-	FixtureFile        string
-	LogFile            string
-	ArchiveFolder      string
+
+	// Control plane
+	DBDSN string
+
+	// Message plane
+	DataDir     string
+	FixtureFile string
+
+	// Log engine
+	LogSegmentBytes       int
+	LogIndexIntervalBytes int
+	MaxMessageBytes       int
 }
 
 var AppConfig *Config
@@ -27,35 +37,40 @@ var AppConfig *Config
 func LoadConfig() *Config {
 	_ = godotenv.Load()
 
+	mode := getEnv("MODE", "production")
+	logsDir := getEnv("LOGS_DIRECTORY", "logs")
+
 	AppConfig = &Config{
-		AppName:            getEnv("APP_NAME", "goq"),
-		Port:               getEnv("PORT", "8080"),
-		DBDriver:           getEnv("DB_DRIVER", "sqlite3"),
-		DBDSN:              getEnv("DB_DSN", "data/goq.db"),
-		WorkerCount:        getEnvInt("WORKER_COUNT", 10),
-		PollIntervalMs:     getEnvInt("POLL_INTERVAL", 500),
-		HTTPTimeoutSeconds: getEnvInt("HTTP_TIMEOUT", 30),
+		AppName: getEnv("APP_NAME", "goq"),
+		Port:    getEnv("PORT", "8080"),
+		LogFile: filepath.Join(logsDir, mode+".log"),
+		Version: getEnv("VERSION", "v1"),
+		Mode:    mode,
+
+		HTTPTimeoutSeconds: getEnv("HTTP_TIMEOUT", 30),
 		IntegrationKey:     getEnv("INTEGRATION_KEY", ""),
-		ArchiveChunkSize:   getEnvInt("ARCHIVE_CHUNK_SIZE", 50000),
-		FixtureFile:        getEnv("FIXTURE_FILE", "build/fixture.json"),
-		LogFile:            getEnv("LOG_FILE", "logs/development.log"),
-		ArchiveFolder:      getEnv("ARCHIVE_FOLDER", "archive"),
+
+		DBDSN:       getEnv("DB_DSN", "data/goq.db"),
+		DataDir:     getEnv("DATA_DIR", "data/logs"),
+		FixtureFile: getEnv("FIXTURES", "build/fixture.json"),
+
+		LogSegmentBytes:       getEnv("LOG_SEGMENT_BYTES", 1<<30),
+		LogIndexIntervalBytes: getEnv("LOG_INDEX_INTERVAL_BYTES", 4096),
+		MaxMessageBytes:       getEnv("MAX_MESSAGE_BYTES", 1<<20),
 	}
 
 	return AppConfig
 }
 
-func getEnv(key, defaultVal string) string {
+func getEnv[T string | int](key string, defaultVal T) T {
 	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	return defaultVal
-}
-
-func getEnvInt(key string, defaultVal int) int {
-	if val, ok := os.LookupEnv(key); ok {
-		if i, err := strconv.Atoi(val); err == nil {
-			return i
+		switch any(defaultVal).(type) {
+		case string:
+			return any(val).(T)
+		case int:
+			if i, err := strconv.Atoi(val); err == nil {
+				return any(i).(T)
+			}
 		}
 	}
 	return defaultVal

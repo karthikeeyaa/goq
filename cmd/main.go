@@ -9,7 +9,7 @@ import (
 	"goq/internal/db"
 	"goq/internal/fixture"
 	"goq/internal/logger"
-	_ "goq/migrations"
+	_ "goq/schema"
 )
 
 func main() {
