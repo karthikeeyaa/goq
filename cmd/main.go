@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"goq/internal/api"
 	"goq/internal/config"
@@ -13,6 +15,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg := config.LoadConfig()
 
 	if err := logger.Init(cfg.LogFile); err != nil {
@@ -30,7 +35,6 @@ func main() {
 	}
 	defer database.Close()
 
-	ctx := context.Background()
 	count, err := db.RunMigrations(ctx, database, logger.InfoLogger)
 	if err != nil {
 		logger.Error("Database migration failed: %v", err)
@@ -44,7 +48,7 @@ func main() {
 	}
 	logger.Info("Successfully created fixtures.")
 
-	if err := api.StartServer(cfg, database, logger.InfoLogger); err != nil {
+	if err := api.StartServer(ctx, cfg, database, logger.InfoLogger); err != nil {
 		logger.Error("HTTP server error: %v", err)
 		os.Exit(1)
 	}

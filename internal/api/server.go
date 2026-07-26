@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,27 +16,28 @@ import (
 	"goq/internal/config"
 )
 
-func StartServer(cfg *config.Config, database *sql.DB, logger *log.Logger) error {
+func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logger *log.Logger) error {
 	queries := store.New(database)
 	router := chi.NewRouter()
 
+	router.Use(middleware.RequestID)
 	router.Use(middleware.ClientIPFromRemoteAddr)
 	router.Use(RequestLogger(logger))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(cfg.HTTPTimeoutSeconds) * time.Second))
 
 	router.Get("/admin/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{
-			"status": "ok",
+		writeSuccess(w, http.StatusOK, map[string]string{
+			"health": "ok",
 		})
 	})
 
 	router.Route("/api/"+cfg.Version, func(r chi.Router) {
 		r.Use(AuthMiddleware(cfg.IntegrationKey, cfg.Mode))
 
-		r.Route("/publish/{topic}", func(r chi.Router) {
+		r.Route("/push/{topic}", func(r chi.Router) {
 			r.Use(ValidateTopic(queries))
-			r.Post("/", Publish(queries))
+			r.Post("/", Push(queries))
 		})
 
 		r.Route("/pull/{topic}", func(r chi.Router) {
@@ -55,8 +58,36 @@ func StartServer(cfg *config.Config, database *sql.DB, logger *log.Logger) error
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	addr := fmt.Sprintf(":%s", cfg.Port)
-	logger.Printf("HTTP server listening on %s", addr)
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: router,
+	}
 
-	return http.ListenAndServe(addr, router)
+	serverErrors := make(chan error, 1)
+
+	go func() {
+		logger.Printf("HTTP server listening on %s", server.Addr)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+		}
+	}()
+
+	select {
+	case err := <-serverErrors:
+		return fmt.Errorf("HTTP server error: %w", err)
+	case <-ctx.Done():
+		logger.Printf("Shutdown signal received")
+
+		shutdownTimeout := max(time.Duration(cfg.HTTPTimeoutSeconds)*time.Second, 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			server.Close()
+			return fmt.Errorf("HTTP server shutdown error: %w", err)
+		}
+		logger.Printf("HTTP server stopped")
+	}
+
+	return nil
 }
