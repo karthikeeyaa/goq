@@ -11,7 +11,7 @@ import (
 	"goq/internal/db"
 	"goq/internal/fixture"
 	"goq/internal/logger"
-	_ "goq/schema"
+	_ "goq/migrations"
 )
 
 func main() {
@@ -26,8 +26,6 @@ func main() {
 	}
 	defer logger.Close()
 
-	logger.Info("Starting %s Message Broker on port %s...", cfg.AppName, cfg.Port)
-
 	database, err := db.Connect(cfg.DBDSN, logger.InfoLogger)
 	if err != nil {
 		logger.Error("Database connection failed: %v", err)
@@ -35,18 +33,15 @@ func main() {
 	}
 	defer database.Close()
 
-	count, err := db.RunMigrations(ctx, database, logger.InfoLogger)
-	if err != nil {
+	if err := db.RunMigrations(ctx, database, logger.InfoLogger); err != nil {
 		logger.Error("Database migration failed: %v", err)
 		os.Exit(1)
 	}
-	logger.Info("Applied %v database migrations.", count)
 
-	if err := fixture.CreateFixtures(cfg.FixtureFile, database, logger.InfoLogger); err != nil {
+	if err := fixture.CreateFixtures(ctx, cfg.FixtureFile, database, logger.InfoLogger); err != nil {
 		logger.Error("Failed to create fixtures: %v", err)
 		os.Exit(1)
 	}
-	logger.Info("Successfully created fixtures.")
 
 	if err := api.StartServer(ctx, cfg, database, logger.InfoLogger); err != nil {
 		logger.Error("HTTP server error: %v", err)

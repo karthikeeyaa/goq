@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+type GoqMigration struct {
+	ID      int64     `json:"id"`
+	Name    string    `json:"name"`
+	Hash    string    `json:"hash"`
+	Applied time.Time `json:"applied"`
+}
+
 type Topic struct {
 	ID            int64          `json:"id"`
 	Name          string         `json:"name"`

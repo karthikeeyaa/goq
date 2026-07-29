@@ -1,5 +1,4 @@
--- schema.sql
--- Database schema for gosub
+-- 002_topic.schema.sql
 
 CREATE TABLE topic (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

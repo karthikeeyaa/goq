@@ -21,7 +21,7 @@ type Fixture struct {
 	Topics []Topic `json:"topics"`
 }
 
-func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err error) {
+func CreateFixtures(ctx context.Context, fixtureFile string, db *sql.DB, logger *log.Logger) (err error) {
 	if _, statErr := os.Stat(fixtureFile); os.IsNotExist(statErr) {
 		return fmt.Errorf("fixture file not found: %s", fixtureFile)
 	}
@@ -48,12 +48,11 @@ func CreateFixtures(fixtureFile string, db *sql.DB, logger *log.Logger) (err err
 
 	logger.Printf("Running fixtures on %d topics", len(fixture.Topics))
 
-	ctx := context.Background()
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin fixture transaction: %w", err)
 	}
+	defer tx.Rollback()
 
 	queries := store.New(tx)
 
