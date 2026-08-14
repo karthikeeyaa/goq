@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -14,15 +13,17 @@ import (
 
 	"goq/db/store"
 	"goq/internal/config"
+	"goq/internal/logger"
+	"goq/internal/logstore"
 )
 
-func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logger *log.Logger) error {
+func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log *logger.Logger, messageStore *logstore.MessageStore) error {
 	queries := store.New(database)
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.ClientIPFromRemoteAddr)
-	router.Use(RequestLogger(logger))
+	router.Use(RequestLogger(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(cfg.HTTPTimeoutSeconds) * time.Second))
 
@@ -36,12 +37,12 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logg
 		r.Use(AuthMiddleware(cfg.IntegrationKey, cfg.Mode))
 
 		r.Route("/push/{topic}", func(r chi.Router) {
-			r.Use(ValidateTopic(queries))
+			r.Use(ValidateTopic(queries, log))
 			r.Post("/", Push(queries))
 		})
 
 		r.Route("/pull/{topic}", func(r chi.Router) {
-			r.Use(ValidateTopic(queries))
+			r.Use(ValidateTopic(queries, log))
 			r.Get("/", Pull(queries))
 		})
 	})
@@ -66,7 +67,7 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logg
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		logger.Printf("HTTP server listening on %s", server.Addr)
+		log.Info("HTTP server listening on %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrors <- err
 		}
@@ -76,7 +77,7 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logg
 	case err := <-serverErrors:
 		return fmt.Errorf("HTTP server error: %w", err)
 	case <-ctx.Done():
-		logger.Printf("Shutdown signal received")
+		log.Info("Shutdown signal received")
 
 		shutdownTimeout := max(time.Duration(cfg.HTTPTimeoutSeconds)*time.Second, 5*time.Second)
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -86,7 +87,7 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, logg
 			server.Close()
 			return fmt.Errorf("HTTP server shutdown error: %w", err)
 		}
-		logger.Printf("HTTP server stopped")
+		log.Info("HTTP server stopped")
 	}
 
 	return nil

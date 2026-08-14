@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"goq/db/store"
+	"goq/internal/config"
+	"goq/internal/logger"
 )
 
 type Topic struct {
@@ -21,14 +22,14 @@ type Fixture struct {
 	Topics []Topic `json:"topics"`
 }
 
-func CreateFixtures(ctx context.Context, fixtureFile string, db *sql.DB, logger *log.Logger) (err error) {
-	if _, statErr := os.Stat(fixtureFile); os.IsNotExist(statErr) {
-		return fmt.Errorf("fixture file not found: %s", fixtureFile)
+func CreateFixtures(ctx context.Context, cfg *config.Config, db *sql.DB, log *logger.Logger) (err error) {
+	if _, statErr := os.Stat(cfg.FixtureFile); os.IsNotExist(statErr) {
+		return fmt.Errorf("fixture file not found: %s", cfg.FixtureFile)
 	}
 
 	var fixture Fixture
 
-	bytes, err := os.ReadFile(fixtureFile)
+	bytes, err := os.ReadFile(cfg.FixtureFile)
 	if err != nil {
 		return fmt.Errorf("unable to read fixture file: %w", err)
 	}
@@ -46,7 +47,7 @@ func CreateFixtures(ctx context.Context, fixtureFile string, db *sql.DB, logger 
 		}
 	}
 
-	logger.Printf("Running fixtures on %d topics", len(fixture.Topics))
+	log.Info("Running fixtures on %d topics", len(fixture.Topics))
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -89,7 +90,7 @@ func CreateFixtures(ctx context.Context, fixtureFile string, db *sql.DB, logger 
 		}
 	}
 
-	logger.Println("Fixture loaded successfully.")
+	log.Info("Fixture loaded successfully.")
 
 	return nil
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"log"
 	"net"
 	"net/http"
 
@@ -14,7 +13,7 @@ import (
 )
 
 // set topic to context
-func ValidateTopic(queries *store.Queries) func(http.Handler) http.Handler {
+func ValidateTopic(queries *store.Queries, log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			topicName := chi.URLParam(r, "topic")
@@ -29,7 +28,7 @@ func ValidateTopic(queries *store.Queries) func(http.Handler) http.Handler {
 				return
 			}
 			if err != nil {
-				logger.Error("failed to look up topic %q: %v", topicName, err)
+				log.Error("failed to look up topic %q: %v", topicName, err)
 				writeError(w, http.StatusInternalServerError, ErrCodeInternalServerError, "internal server error")
 				return
 			}
@@ -40,7 +39,7 @@ func ValidateTopic(queries *store.Queries) func(http.Handler) http.Handler {
 	}
 }
 
-func RequestLogger(l *log.Logger) func(http.Handler) http.Handler {
+func RequestLogger(log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := middleware.GetReqID(r.Context())
@@ -49,9 +48,9 @@ func RequestLogger(l *log.Logger) func(http.Handler) http.Handler {
 				ip = r.RemoteAddr
 			}
 			if reqID != "" {
-				l.Printf("[%s] %s %s %s", reqID, r.Method, r.URL.Path, ip)
+				log.Info("[%s] %s %s %s", reqID, r.Method, r.URL.Path, ip)
 			} else {
-				l.Printf("%s %s %s", r.Method, r.URL.Path, ip)
+				log.Info("%s %s %s", r.Method, r.URL.Path, ip)
 			}
 			next.ServeHTTP(w, r)
 		})

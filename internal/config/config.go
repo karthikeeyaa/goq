@@ -23,7 +23,7 @@ type Config struct {
 	DBDSN string
 
 	// Message plane
-	DataDir     string
+	MessagesDir string
 	FixtureFile string
 
 	// Log engine
@@ -51,8 +51,9 @@ func LoadConfig() *Config {
 		IntegrationKey:     getEnv("INTEGRATION_KEY", ""),
 
 		DBDSN:       getEnv("DB_DSN", "data/goq.db"),
-		DataDir:     getEnv("DATA_DIR", "data/logs"),
-		FixtureFile: getEnv("FIXTURES", "build/fixture.json"),
+		
+		MessagesDir:     getEnv("MESSAGES_DIR", "data/messages"),
+		FixtureFile: getEnv("FIXTURE_FILE", "build/fixture.json"),
 
 		LogSegmentBytes:       getEnv("LOG_SEGMENT_BYTES", 1<<30),
 		LogIndexIntervalBytes: getEnv("LOG_INDEX_INTERVAL_BYTES", 4096),

@@ -4,6 +4,10 @@ FROM topic
 WHERE name = ?
 LIMIT 1;
 
+-- name: ListTopics :many
+SELECT *
+FROM topic;
+
 -- name: UpsertTopic :exec
 INSERT INTO topic (name, retention_ms, cleanup_policy)
 VALUES (?, ?, ?)

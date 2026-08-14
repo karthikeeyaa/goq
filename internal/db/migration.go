@@ -2,21 +2,21 @@ package db
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"sort"
 	"strings"
-	"errors"
 
-	"goq/migrations"
 	"goq/db/store"
+	"goq/internal/logger"
+	schema "goq/migrations"
 )
 
-func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) error {
+func RunMigrations(ctx context.Context, db *sql.DB, log *logger.Logger) error {
 
 	// 1. Read migrations files and create hash key
 	files, err := fs.ReadDir(schema.FS, ".")
@@ -62,7 +62,7 @@ func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) error {
 
 	// 3. Apply each migration
 	for _, filename := range sqlFiles {
-		
+
 		migrationHash := migrations[filename]
 		applied := true
 
@@ -75,15 +75,14 @@ func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) error {
 			}
 		}
 
-
 		if applied {
-			if migrationHash != migration.Hash  {
+			if migrationHash != migration.Hash {
 				return fmt.Errorf("migration hash for %s does not match", filename)
 			}
 			continue
 		}
 
-		logger.Printf("Applying database migration: %s", filename)
+		log.Info("Applying database migration: %s", filename)
 
 		content, err := fs.ReadFile(schema.FS, filename)
 		if err != nil {
@@ -108,7 +107,7 @@ func RunMigrations(ctx context.Context, db *sql.DB, logger *log.Logger) error {
 		return fmt.Errorf("failed to commit migration transaction: %w", err)
 	}
 
-	logger.Printf("Applied %d database migrations.", migrationCount)
+	log.Info("Applied %d database migrations.", migrationCount)
 
 	return nil
 }

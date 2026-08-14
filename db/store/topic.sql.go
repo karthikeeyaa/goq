@@ -30,6 +30,40 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 	return i, err
 }
 
+const listTopics = `-- name: ListTopics :many
+SELECT id, name, retention_ms, cleanup_policy, created_at
+FROM topic
+`
+
+func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
+	rows, err := q.db.QueryContext(ctx, listTopics)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Topic
+	for rows.Next() {
+		var i Topic
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.RetentionMs,
+			&i.CleanupPolicy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertTopic = `-- name: UpsertTopic :exec
 INSERT INTO topic (name, retention_ms, cleanup_policy)
 VALUES (?, ?, ?)

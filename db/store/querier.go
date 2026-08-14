@@ -12,6 +12,7 @@ type Querier interface {
 	CreateGoqMigrationTable(ctx context.Context) error
 	GetGoqMigration(ctx context.Context, name string) (GoqMigration, error)
 	GetTopic(ctx context.Context, name string) (Topic, error)
+	ListTopics(ctx context.Context) ([]Topic, error)
 	UpsertGoqMigration(ctx context.Context, arg UpsertGoqMigrationParams) error
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }

@@ -11,6 +11,7 @@ import (
 	"goq/internal/db"
 	"goq/internal/fixture"
 	"goq/internal/logger"
+	"goq/internal/logstore"
 	_ "goq/migrations"
 )
 
@@ -20,31 +21,39 @@ func main() {
 
 	cfg := config.LoadConfig()
 
-	if err := logger.Init(cfg.LogFile); err != nil {
+	log, err := logger.Init(cfg)
+	if err != nil {
 		os.Stderr.WriteString("Failed to initialize logger: " + err.Error() + "\n")
 		os.Exit(1)
 	}
-	defer logger.Close()
+	defer log.Close()
 
-	database, err := db.Connect(cfg.DBDSN, logger.InfoLogger)
+	database, err := db.Connect(cfg)
 	if err != nil {
-		logger.Error("Database connection failed: %v", err)
+		log.Error("Database connection failed: %v", err)
 		os.Exit(1)
 	}
 	defer database.Close()
 
-	if err := db.RunMigrations(ctx, database, logger.InfoLogger); err != nil {
-		logger.Error("Database migration failed: %v", err)
+	if err := db.RunMigrations(ctx, database, log); err != nil {
+		log.Error("Database migration failed: %v", err)
 		os.Exit(1)
 	}
 
-	if err := fixture.CreateFixtures(ctx, cfg.FixtureFile, database, logger.InfoLogger); err != nil {
-		logger.Error("Failed to create fixtures: %v", err)
+	if err := fixture.CreateFixtures(ctx, cfg, database, log); err != nil {
+		log.Error("Failed to create fixtures: %v", err)
 		os.Exit(1)
 	}
 
-	if err := api.StartServer(ctx, cfg, database, logger.InfoLogger); err != nil {
-		logger.Error("HTTP server error: %v", err)
+	messageStore, err := logstore.Init(ctx, cfg, database, log)
+	if err != nil {
+		log.Error("Failed to initialize message log store: %v", err)
+		os.Exit(1)
+	}
+	defer messageStore.Close()
+
+	if err := api.StartServer(ctx, cfg, database, log, messageStore); err != nil {
+		log.Error("HTTP server error: %v", err)
 		os.Exit(1)
 	}
 }

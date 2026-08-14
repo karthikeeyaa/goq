@@ -3,14 +3,18 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	_ "modernc.org/sqlite"
+
+	"goq/internal/config"
 )
 
-func Connect(dsn string, logger *log.Logger) (*sql.DB, error) {
+func Connect(cfg *config.Config) (*sql.DB, error) {
+
+	dsn := cfg.DBDSN
+
 	dir := filepath.Dir(dsn)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -34,7 +38,7 @@ func Connect(dsn string, logger *log.Logger) (*sql.DB, error) {
 		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	
+
 	// journal_mode=WAL to activate write ahead log
 	_, err = db.Exec("PRAGMA journal_mode=DELETE; PRAGMA foreign_keys=ON;")
 	if err != nil {

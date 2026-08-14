@@ -3,68 +3,59 @@ package logger
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
+
+	"goq/internal/config"
 )
 
-var (
-	InfoLogger  *log.Logger
-	WarnLogger  *log.Logger
-	ErrorLogger *log.Logger
-	logFile     *os.File
-)
+type Logger struct {
+	file *os.File
+	writer io.Writer
+}
 
-func Init(logPath string) error {
+func Init(cfg *config.Config) (*Logger, error) {
+	logPath := cfg.LogFile
+
 	dir := filepath.Dir(logPath)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create log directory %q: %w", dir, err)
+			return nil, fmt.Errorf("failed to create log directory %q: %w", dir, err)
 		}
 	}
 
 	var err error
-	logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to open log file %q: %w", logPath, err)
+		return nil, fmt.Errorf("failed to open log file %q: %w", logPath, err)
 	}
 
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
 
-	InfoLogger = log.New(multiWriter, "[INFO] ", log.LstdFlags|log.Lshortfile)
-	WarnLogger = log.New(multiWriter, "[WARN] ", log.LstdFlags|log.Lshortfile)
-	ErrorLogger = log.New(multiWriter, "[ERROR] ", log.LstdFlags|log.Lshortfile)
-
-	return nil
+	return &Logger{file: logFile, writer: multiWriter}, nil
 }
 
-func Close() error {
-	if logFile != nil {
-		return logFile.Close()
+func (l *Logger) Close() error {
+	if l.file != nil {
+		return l.file.Close()
 	}
 	return nil
 }
 
-func Info(format string, v ...interface{}) {
-	if InfoLogger != nil {
-		InfoLogger.Output(2, fmt.Sprintf(format, v...))
-	} else {
-		log.Printf("[INFO] "+format, v...)
+func (l *Logger) Info(format string, v ...interface{}) {
+	if l.writer != nil {
+		fmt.Fprintf(l.writer, "[INFO] "+format+"\n", v...)
 	}
 }
 
-func Warn(format string, v ...interface{}) {
-	if WarnLogger != nil {
-		WarnLogger.Output(2, fmt.Sprintf(format, v...))
-	} else {
-		log.Printf("[WARN] "+format, v...)
+func (l *Logger) Warn(format string, v ...interface{}) {
+	if l.writer != nil {
+		fmt.Fprintf(l.writer, "[WARN] "+format+"\n", v...)
 	}
 }
 
-func Error(format string, v ...interface{}) {
-	if ErrorLogger != nil {
-		ErrorLogger.Output(2, fmt.Sprintf(format, v...))
-	} else {
-		log.Printf("[ERROR] "+format, v...)
+func (l *Logger) Error(format string, v ...interface{}) {
+	if l.writer != nil {
+		fmt.Fprintf(l.writer, "[ERROR] "+format+"\n", v...)
 	}
 }
