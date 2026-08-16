@@ -5,24 +5,31 @@ import (
 	"net/http"
 
 	"goq/db/store"
+	"goq/internal/logstore"
 )
 
-type PushRequest struct {
-	Payload json.RawMessage `json:"payload"`
-}
-
-type PushResponse struct {
-	Topic  string `json:"topic"`
-	Offset int64  `json:"offset"`
-}
-
-func Push(queries *store.Queries) http.HandlerFunc {
+func Push(queries *store.Queries, messageStore *logstore.MessageStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		topic := topicFromCtx(r.Context())
+
+		_, exists := messageStore.GetMessageFile(topic.Name)
+		if !exists {
+			Response(w, http.StatusNotFound, ErrorResponse{
+				Status:  "error",
+				Code:    TopicNotFound,
+				Message: "topic not found",
+			})
+			return
+		}
 
 		var req PushRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Payload) == 0 {
-			writeError(w, http.StatusBadRequest, ErrCodeInvalidInput, "invalid or missing 'payload' in request body")
+			Response(w, http.StatusBadRequest, ErrorResponse{
+				Status:  "error",
+				Code:    InvalidInput,
+				Message: "invalid or missing 'payload' in request body",
+			})
 			return
 		}
 
@@ -32,6 +39,6 @@ func Push(queries *store.Queries) http.HandlerFunc {
 			Offset: 0,
 		}
 
-		writeSuccess(w, http.StatusAccepted, res)
+		Response(w, http.StatusAccepted, res)
 	}
 }

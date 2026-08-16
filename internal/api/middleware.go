@@ -18,18 +18,30 @@ func ValidateTopic(queries *store.Queries, log *logger.Logger) func(http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			topicName := chi.URLParam(r, "topic")
 			if topicName == "" {
-				writeError(w, http.StatusBadRequest, ErrCodeInvalidInput, "topic name is required")
+				Response(w, http.StatusBadRequest, ErrorResponse{
+					Status:  "error",
+					Code:    InvalidInput,
+					Message: "topic name is required",
+				})
 				return
 			}
 
 			topic, err := queries.GetTopic(r.Context(), topicName)
 			if err == sql.ErrNoRows {
-				writeError(w, http.StatusNotFound, ErrCodeTopicNotFound, "topic not found: "+topicName)
+				Response(w, http.StatusNotFound, ErrorResponse{
+					Status:  "error",
+					Code:    TopicNotFound,
+					Message: "topic not found: " + topicName,
+				})
 				return
 			}
 			if err != nil {
 				log.Error("failed to look up topic %q: %v", topicName, err)
-				writeError(w, http.StatusInternalServerError, ErrCodeInternalServerError, "internal server error")
+				Response(w, http.StatusInternalServerError, ErrorResponse{
+					Status:  "error",
+					Code:    InternalServerError,
+					Message: "internal server error",
+				})
 				return
 			}
 
@@ -69,7 +81,11 @@ func AuthMiddleware(integrationKey, mode string) func(http.Handler) http.Handler
 			expectedHeader := "token " + integrationKey
 
 			if authHeader != expectedHeader {
-				writeError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "unauthorized")
+				Response(w, http.StatusUnauthorized, ErrorResponse{
+					Status:  "error",
+					Code:    Unauthorized,
+					Message: "unauthorized",
+				})
 				return
 			}
 

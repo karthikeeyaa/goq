@@ -18,7 +18,9 @@ import (
 )
 
 func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log *logger.Logger, messageStore *logstore.MessageStore) error {
+
 	queries := store.New(database)
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -28,9 +30,7 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log 
 	router.Use(middleware.Timeout(time.Duration(cfg.HTTPTimeoutSeconds) * time.Second))
 
 	router.Get("/admin/health", func(w http.ResponseWriter, r *http.Request) {
-		writeSuccess(w, http.StatusOK, map[string]string{
-			"health": "ok",
-		})
+		Response(w, http.StatusOK, HealthResponse{Status: "ok"})
 	})
 
 	router.Route("/api/"+cfg.Version, func(r chi.Router) {
@@ -38,12 +38,12 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log 
 
 		r.Route("/push/{topic}", func(r chi.Router) {
 			r.Use(ValidateTopic(queries, log))
-			r.Post("/", Push(queries))
+			r.Post("/", Push(queries, messageStore))
 		})
 
 		r.Route("/pull/{topic}", func(r chi.Router) {
 			r.Use(ValidateTopic(queries, log))
-			r.Get("/", Pull(queries))
+			r.Get("/", Pull(queries, messageStore))
 		})
 	})
 

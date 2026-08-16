@@ -56,6 +56,11 @@ func Init(ctx context.Context, cfg *config.Config, database *sql.DB, log *logger
 	return &messageStore, nil
 }
 
+func (ms *MessageStore) GetMessageFile(topicName string) (*MessageFile, bool) {
+	mf, exists := (*ms)[topicName]
+	return mf, exists
+}
+
 func (ms *MessageStore) Close() error {
 	for _, mf := range *ms {
 		mf.mu.Lock()
