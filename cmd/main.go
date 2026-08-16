@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+	
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -45,14 +46,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	messageStore, err := logstore.Init(ctx, cfg, database, log)
+	logStore, err := logstore.Init(ctx, cfg, database, log)
 	if err != nil {
 		log.Error("Failed to initialize message log store: %v", err)
 		os.Exit(1)
 	}
-	defer messageStore.Close()
+	defer logStore.Close()
 
-	if err := api.StartServer(ctx, cfg, database, log, messageStore); err != nil {
+	if err := api.StartServer(ctx, cfg, database, log, logStore); err != nil {
 		log.Error("HTTP server error: %v", err)
 		os.Exit(1)
 	}

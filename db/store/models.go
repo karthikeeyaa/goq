@@ -17,9 +17,11 @@ type GoqMigration struct {
 }
 
 type Topic struct {
-	ID            int64          `json:"id"`
-	Name          string         `json:"name"`
-	RetentionMs   sql.NullInt64  `json:"retention_ms"`
-	CleanupPolicy sql.NullString `json:"cleanup_policy"`
-	CreatedAt     time.Time      `json:"created_at"`
+	ID                    int64          `json:"id"`
+	Name                  string         `json:"name"`
+	RetentionMs           sql.NullInt64  `json:"retention_ms"`
+	CleanupPolicy         sql.NullString `json:"cleanup_policy"`
+	MaxMessageBytes       sql.NullInt64  `json:"max_message_bytes"`
+	LogIndexIntervalBytes sql.NullInt64  `json:"log_index_interval_bytes"`
+	CreatedAt             time.Time      `json:"created_at"`
 }

@@ -11,6 +11,7 @@ type ErrorCode string
 const (
 	InvalidInput        ErrorCode = "INVALID_INPUT"
 	TopicNotFound       ErrorCode = "TOPIC_NOT_FOUND"
+	OffsetOutOfBounds   ErrorCode = "OFFSET_OUT_OF_BOUNDS"
 	InternalServerError ErrorCode = "INTERNAL_SERVER_ERROR"
 	Unauthorized        ErrorCode = "UNAUTHORIZED"
 )
@@ -20,9 +21,10 @@ type HealthResponse struct {
 }
 
 type ErrorResponse struct {
-	Status  string    `json:"status"`
-	Code    ErrorCode `json:"code"`
-	Message string    `json:"message"`
+	Status        string    `json:"status"`
+	Code          ErrorCode `json:"code"`
+	Message       string    `json:"message"`
+	HighWatermark int64     `json:"high_watermark"`
 }
 
 type PushRequest struct {
@@ -30,20 +32,27 @@ type PushRequest struct {
 }
 
 type PushResponse struct {
-	Topic  string `json:"topic"`
-	Offset int64  `json:"offset"`
+	Status               string `json:"status"`
+	Topic                string `json:"topic"`
+	Offset               int64  `json:"offset"`
+	MaxMessageBytesLimit int64  `json:"max_message_bytes_limit"`
+	TimestampMS          int64  `json:"timestamp_ms"`
 }
 
 type PullMessage struct {
-	Offset    int64       `json:"offset"`
-	Timestamp int64       `json:"timestamp"`
-	Payload   interface{} `json:"payload"`
+	Offset      int64           `json:"offset"`
+	TimestampMS int64           `json:"timestamp_ms"`
+	Payload     json.RawMessage `json:"payload"`
 }
 
 type PullResponse struct {
-	Status  string    `json:"status"`
-	Count   int       `json:"count"`
-	Results []PullMessage `json:"results"`
+	Status          string        `json:"status"`
+	Count           int           `json:"count"`
+	Topic           string        `json:"topic"`
+	RequestedOffset int64         `json:"requested_offset"`
+	NextOffset      int64         `json:"next_offset"`
+	HighWatermark   int64         `json:"high_watermark"`
+	Results         []PullMessage `json:"results"`
 }
 
 func Response(w http.ResponseWriter, status int, v any) {
@@ -52,12 +61,12 @@ func Response(w http.ResponseWriter, status int, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
-func parseQueryInt64(r *http.Request, key string, defaultValue int64) (int64, error) {
+func parseQueryInt(r *http.Request, key string, defaultValue int) (int, error) {
 	valStr := r.URL.Query().Get(key)
 	if valStr == "" {
 		return defaultValue, nil
 	}
-	val, err := strconv.ParseInt(valStr, 10, 64)
+	val, err := strconv.Atoi(valStr)
 	if err != nil {
 		return -1, err
 	}

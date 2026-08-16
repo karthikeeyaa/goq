@@ -7,12 +7,12 @@ import (
 	"goq/internal/logstore"
 )
 
-func Pull(queries *store.Queries, messageStore *logstore.MessageStore) http.HandlerFunc {
+func Pull(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		topic := topicFromCtx(r.Context())
 
-		_, exists := messageStore.GetMessageFile(topic.Name)
+		_, exists := logStore.GetLogFile(topic.Name)
 		if !exists {
 			Response(w, http.StatusNotFound, ErrorResponse{
 				Status:  "error",
@@ -22,8 +22,8 @@ func Pull(queries *store.Queries, messageStore *logstore.MessageStore) http.Hand
 			return
 		}
 
-		from, err := parseQueryInt64(r, "from", 0)
-		if err != nil || from < 0 {
+		offset, err := parseQueryInt(r, "offset", 0)
+		if err != nil || offset < 0 {
 			Response(w, http.StatusBadRequest, ErrorResponse{
 				Status:  "error",
 				Code:    InvalidInput,
@@ -32,7 +32,7 @@ func Pull(queries *store.Queries, messageStore *logstore.MessageStore) http.Hand
 			return
 		}
 
-		limit, err := parseQueryInt64(r, "limit", 100)
+		limit, err := parseQueryInt(r, "limit", 100)
 		if err != nil || limit <= 0 {
 			Response(w, http.StatusBadRequest, ErrorResponse{
 				Status:  "error",
@@ -45,10 +45,8 @@ func Pull(queries *store.Queries, messageStore *logstore.MessageStore) http.Hand
 			limit = 1000
 		}
 
-		_ = topic
-		// TODO: Fetch messages from topic log starting from offset 'from' up to 'limit'
 		res := PullResponse{
-			Status: "success",
+			Status:  "success",
 			Count:   0,
 			Results: []PullMessage{},
 		}

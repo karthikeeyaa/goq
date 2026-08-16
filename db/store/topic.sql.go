@@ -11,7 +11,7 @@ import (
 )
 
 const getTopic = `-- name: GetTopic :one
-SELECT id, name, retention_ms, cleanup_policy, created_at
+SELECT id, name, retention_ms, cleanup_policy, max_message_bytes, log_index_interval_bytes, created_at
 FROM topic
 WHERE name = ?
 LIMIT 1
@@ -25,13 +25,15 @@ func (q *Queries) GetTopic(ctx context.Context, name string) (Topic, error) {
 		&i.Name,
 		&i.RetentionMs,
 		&i.CleanupPolicy,
+		&i.MaxMessageBytes,
+		&i.LogIndexIntervalBytes,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listTopics = `-- name: ListTopics :many
-SELECT id, name, retention_ms, cleanup_policy, created_at
+SELECT id, name, retention_ms, cleanup_policy, max_message_bytes, log_index_interval_bytes, created_at
 FROM topic
 `
 
@@ -49,6 +51,8 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 			&i.Name,
 			&i.RetentionMs,
 			&i.CleanupPolicy,
+			&i.MaxMessageBytes,
+			&i.LogIndexIntervalBytes,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -65,20 +69,36 @@ func (q *Queries) ListTopics(ctx context.Context) ([]Topic, error) {
 }
 
 const upsertTopic = `-- name: UpsertTopic :exec
-INSERT INTO topic (name, retention_ms, cleanup_policy)
-VALUES (?, ?, ?)
+INSERT INTO topic (
+    name, 
+    retention_ms, 
+    cleanup_policy, 
+    max_message_bytes, 
+    log_index_interval_bytes
+)
+VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(name) DO UPDATE SET
     retention_ms = excluded.retention_ms,
-    cleanup_policy = excluded.cleanup_policy
+    cleanup_policy = excluded.cleanup_policy,
+    max_message_bytes = excluded.max_message_bytes,
+    log_index_interval_bytes = excluded.log_index_interval_bytes
 `
 
 type UpsertTopicParams struct {
-	Name          string         `json:"name"`
-	RetentionMs   sql.NullInt64  `json:"retention_ms"`
-	CleanupPolicy sql.NullString `json:"cleanup_policy"`
+	Name                  string         `json:"name"`
+	RetentionMs           sql.NullInt64  `json:"retention_ms"`
+	CleanupPolicy         sql.NullString `json:"cleanup_policy"`
+	MaxMessageBytes       sql.NullInt64  `json:"max_message_bytes"`
+	LogIndexIntervalBytes sql.NullInt64  `json:"log_index_interval_bytes"`
 }
 
 func (q *Queries) UpsertTopic(ctx context.Context, arg UpsertTopicParams) error {
-	_, err := q.db.ExecContext(ctx, upsertTopic, arg.Name, arg.RetentionMs, arg.CleanupPolicy)
+	_, err := q.db.ExecContext(ctx, upsertTopic,
+		arg.Name,
+		arg.RetentionMs,
+		arg.CleanupPolicy,
+		arg.MaxMessageBytes,
+		arg.LogIndexIntervalBytes,
+	)
 	return err
 }

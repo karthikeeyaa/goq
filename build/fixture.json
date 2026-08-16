@@ -1,14 +1,19 @@
 {
     "topics": [
         {
-            "name": "payments",
-            "retention_ms": 86400000,
-            "cleanup_policy": "delete"
+            "name": "orders",
+            "retention_ms": 604800000,
+            "cleanup_policy": "delete",
+            "max_message_bytes": 2097152,
+            "log_index_interval_bytes": 4096
         },
         {
-            "name": "invoices",
-            "retention_ms": 172800000,
-            "cleanup_policy": "delete"
+            "name": "notifications",
+            "retention_ms": 604800000,
+            "cleanup_policy": "delete",
+            "max_message_bytes": 2097152,
+            "log_index_interval_bytes": 4096
+
         }
     ]
 }

@@ -50,14 +50,10 @@ func LoadConfig() *Config {
 		HTTPTimeoutSeconds: getEnv("HTTP_TIMEOUT", 30),
 		IntegrationKey:     getEnv("INTEGRATION_KEY", ""),
 
-		DBDSN:       getEnv("DB_DSN", "data/goq.db"),
-		
-		MessagesDir:     getEnv("MESSAGES_DIR", "data/messages"),
-		FixtureFile: getEnv("FIXTURE_FILE", "build/fixture.json"),
+		DBDSN: getEnv("DB_DSN", "data/goq.db"),
 
-		LogSegmentBytes:       getEnv("LOG_SEGMENT_BYTES", 1<<30),
-		LogIndexIntervalBytes: getEnv("LOG_INDEX_INTERVAL_BYTES", 4096),
-		MaxMessageBytes:       getEnv("MAX_MESSAGE_BYTES", 1<<20),
+		MessagesDir: getEnv("MESSAGES_DIR", "data/messages"),
+		FixtureFile: getEnv("FIXTURE_FILE", "build/fixture.json"),
 	}
 
 	return AppConfig

@@ -8,12 +8,12 @@ import (
 	"goq/internal/logstore"
 )
 
-func Push(queries *store.Queries, messageStore *logstore.MessageStore) http.HandlerFunc {
+func Push(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		topic := topicFromCtx(r.Context())
 
-		_, exists := messageStore.GetMessageFile(topic.Name)
+		_, exists := logStore.GetLogFile(topic.Name)
 		if !exists {
 			Response(w, http.StatusNotFound, ErrorResponse{
 				Status:  "error",

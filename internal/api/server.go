@@ -17,7 +17,7 @@ import (
 	"goq/internal/logstore"
 )
 
-func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log *logger.Logger, messageStore *logstore.MessageStore) error {
+func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log *logger.Logger, logStore *logstore.LogStore) error {
 
 	queries := store.New(database)
 
@@ -38,12 +38,12 @@ func StartServer(ctx context.Context, cfg *config.Config, database *sql.DB, log 
 
 		r.Route("/push/{topic}", func(r chi.Router) {
 			r.Use(ValidateTopic(queries, log))
-			r.Post("/", Push(queries, messageStore))
+			r.Post("/", Push(queries, logStore))
 		})
 
 		r.Route("/pull/{topic}", func(r chi.Router) {
 			r.Use(ValidateTopic(queries, log))
-			r.Get("/", Pull(queries, messageStore))
+			r.Get("/", Pull(queries, logStore))
 		})
 	})
 
