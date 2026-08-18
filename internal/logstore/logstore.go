@@ -40,6 +40,12 @@ From index file seek, get Absolute position and Payload length which allows to
 directly seek into message body in the log file
 */
 
+type LogMessage struct {
+	Offset      int
+	TimestampMS int64
+	Payload     any
+}
+
 type LogFile struct {
 	mu        sync.Mutex
 	Topic     store.Topic

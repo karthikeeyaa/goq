@@ -1,19 +1,21 @@
 info:
-  name: Publish
+  name: Push
   type: http
   seq: 1
 
 http:
   method: POST
-  url: "{{url}}/api/v1/publish/payments/"
+  url: "{{url}}/api/v1/push/notifications/"
   body:
     type: json
     data: |-
       {
-        "id": "test",
-        "customer_id": "kv_123",
-        "amount": "56",
-        "currency": "INR"
+        "payload": {
+          "id": "test",
+          "customer_id": "kv_123",
+          "amount": "56",
+          "currency": "INR"
+        }
       }
   auth: inherit
 

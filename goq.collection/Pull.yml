@@ -1,18 +1,17 @@
 info:
-  name: Publish
+  name: Pull
   type: http
   seq: 1
 
 http:
   method: GET
-  url: "{{url}}/api/v1/pull/payments/?limit=100"
+  url: "{{url}}/api/v1/pull/notifications/?offset=0&limit=30"
   params:
-    - name: from
-      value: "11"
+    - name: offset
+      value: "0"
       type: query
-      disabled: true
     - name: limit
-      value: "100"
+      value: "30"
       type: query
   auth: inherit
 
@@ -21,4 +20,3 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
-​

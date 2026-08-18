@@ -13,12 +13,12 @@ func Push(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc 
 
 		topic := topicFromCtx(r.Context())
 
-		_, exists := logStore.GetLogFile(topic.Name)
+		logFile, exists := logStore.GetLogFile(topic.Name)
 		if !exists {
 			Response(w, http.StatusNotFound, ErrorResponse{
 				Status:  "error",
-				Code:    TopicNotFound,
-				Message: "topic not found",
+				Code:    LogFileNotFound,
+				Message: "log file not found for topic " + topic.Name,
 			})
 			return
 		}
@@ -33,12 +33,22 @@ func Push(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc 
 			return
 		}
 
-		// TODO: Write message payload to topic storage segment and receive assigned offset
-		res := PushResponse{
-			Topic:  topic.Name,
-			Offset: 0,
+		logMessage, err := logFile.Append(req.Payload)
+		if err != nil {
+			Response(w, http.StatusInternalServerError, ErrorResponse{
+				Status:  "error",
+				Code:    InternalServerError,
+				Message: "failed to append message to log file",
+			})
+			return
 		}
 
-		Response(w, http.StatusAccepted, res)
+		Response(w, http.StatusAccepted, PushResponse{
+			Status:               "success",
+			Topic:                topic.Name,
+			Offset:               logMessage.Offset,
+			MaxMessageBytesLimit: int(topic.MaxMessageBytes.Int64),
+			TimestampMS:          int(logMessage.TimestampMS),
+		})
 	}
 }

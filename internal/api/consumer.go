@@ -12,12 +12,12 @@ func Pull(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc 
 
 		topic := topicFromCtx(r.Context())
 
-		_, exists := logStore.GetLogFile(topic.Name)
+		logFile, exists := logStore.GetLogFile(topic.Name)
 		if !exists {
 			Response(w, http.StatusNotFound, ErrorResponse{
 				Status:  "error",
-				Code:    TopicNotFound,
-				Message: "topic not found",
+				Code:    LogFileNotFound,
+				Message: "log file not found for topic " + topic.Name,
 			})
 			return
 		}
@@ -45,12 +45,24 @@ func Pull(queries *store.Queries, logStore *logstore.LogStore) http.HandlerFunc 
 			limit = 1000
 		}
 
-		res := PullResponse{
-			Status:  "success",
-			Count:   0,
-			Results: []PullMessage{},
+		logMessages, highWatermark, err := logFile.Read(offset, limit)
+		if err != nil {
+			Response(w, http.StatusInternalServerError, ErrorResponse{
+				Status:  "error",
+				Code:    InternalServerError,
+				Message: "failed to read messages from log file",
+			})
+			return
 		}
 
-		Response(w, http.StatusOK, res)
+		Response(w, http.StatusOK, PullResponse{
+			Status:          "success",
+			Count:           len(logMessages),
+			Topic:           topic.Name,
+			RequestedOffset: offset,
+			NextOffset:      offset + len(logMessages),
+			HighWatermark:   highWatermark,
+			Results:         logMessages,
+		})
 	}
 }

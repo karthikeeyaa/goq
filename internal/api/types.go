@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"goq/internal/logstore"
 	"net/http"
 	"strconv"
 )
@@ -11,6 +12,7 @@ type ErrorCode string
 const (
 	InvalidInput        ErrorCode = "INVALID_INPUT"
 	TopicNotFound       ErrorCode = "TOPIC_NOT_FOUND"
+	LogFileNotFound     ErrorCode = "LOG_FILE_NOT_FOUND"
 	OffsetOutOfBounds   ErrorCode = "OFFSET_OUT_OF_BOUNDS"
 	InternalServerError ErrorCode = "INTERNAL_SERVER_ERROR"
 	Unauthorized        ErrorCode = "UNAUTHORIZED"
@@ -21,10 +23,9 @@ type HealthResponse struct {
 }
 
 type ErrorResponse struct {
-	Status        string    `json:"status"`
-	Code          ErrorCode `json:"code"`
-	Message       string    `json:"message"`
-	HighWatermark int64     `json:"high_watermark"`
+	Status  string    `json:"status"`
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
 }
 
 type PushRequest struct {
@@ -34,25 +35,20 @@ type PushRequest struct {
 type PushResponse struct {
 	Status               string `json:"status"`
 	Topic                string `json:"topic"`
-	Offset               int64  `json:"offset"`
-	MaxMessageBytesLimit int64  `json:"max_message_bytes_limit"`
-	TimestampMS          int64  `json:"timestamp_ms"`
+	Offset               int    `json:"offset"`
+	MaxMessageBytesLimit int    `json:"max_message_bytes_limit"`
+	TimestampMS          int    `json:"timestamp_ms"`
 }
 
-type PullMessage struct {
-	Offset      int64           `json:"offset"`
-	TimestampMS int64           `json:"timestamp_ms"`
-	Payload     json.RawMessage `json:"payload"`
-}
-
+	
 type PullResponse struct {
-	Status          string        `json:"status"`
-	Count           int           `json:"count"`
-	Topic           string        `json:"topic"`
-	RequestedOffset int64         `json:"requested_offset"`
-	NextOffset      int64         `json:"next_offset"`
-	HighWatermark   int64         `json:"high_watermark"`
-	Results         []PullMessage `json:"results"`
+	Status          string                `json:"status"`
+	Count           int                   `json:"count"`
+	Topic           string                `json:"topic"`
+	RequestedOffset int                   `json:"requested_offset"`
+	NextOffset      int                   `json:"next_offset"`
+	HighWatermark   int                   `json:"high_watermark"`
+	Results         []logstore.LogMessage `json:"results"`
 }
 
 func Response(w http.ResponseWriter, status int, v any) {
